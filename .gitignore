@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+frontend/dist/
+coverage/
+test-results/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# PocketBase runtime data (sqlite + local storage)
+pocketbase/pb_data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
