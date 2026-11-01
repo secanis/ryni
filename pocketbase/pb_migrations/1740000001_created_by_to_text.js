@@ -23,7 +23,7 @@ migrate(
     }
 
     var field = col.fields.getByName('created_by');
-    if (!field || field.type !== 'relation') return;
+    if (!field || field.type() !== 'relation') return;
 
     // Snapshot existing creator ids before dropping the relation.
     var creators = {};
