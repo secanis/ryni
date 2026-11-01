@@ -30,7 +30,7 @@ export default function ShareDialog(props: { siteId: string; onClose: () => void
   }
 
   return (
-    <div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={props.onClose}>
+    <div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => props.onClose()}>
       <div
         class="bg-white dark:bg-slate-900 rounded-lg shadow p-6 w-full max-w-sm space-y-4"
         onClick={(e) => e.stopPropagation()}

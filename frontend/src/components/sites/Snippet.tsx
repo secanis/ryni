@@ -51,7 +51,7 @@ export default function Snippet(props: { input: SnippetInput; onDone: () => void
       </div>
 
       <button
-        onClick={props.onDone}
+        onClick={() => props.onDone()}
         class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2"
       >
         Done
