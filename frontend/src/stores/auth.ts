@@ -44,7 +44,17 @@ async function init(): Promise<void> {
 }
 
 async function signIn(email: string, password: string): Promise<void> {
-  await pb.collection('users').authWithPassword(email, password);
+  try {
+    await pb.collection('users').authWithPassword(email, password);
+  } catch (err) {
+    // The global admin lives in the `_superusers` collection, not `users`.
+    // Fall back there only on a credential failure, not on network errors.
+    if (err instanceof ClientResponseError && (err.status === 400 || err.status === 404)) {
+      await pb.collection('_superusers').authWithPassword(email, password);
+    } else {
+      throw err;
+    }
+  }
   setUser(pb.authStore.model);
   setIsSuperuser(pb.authStore.isSuperuser);
 }
