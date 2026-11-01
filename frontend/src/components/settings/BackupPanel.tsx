@@ -1,5 +1,4 @@
 import { createSignal, For, onMount, Show } from 'solid-js';
-import { auth } from '~/stores/auth';
 import { pb } from '~/services/pocketbase';
 
 interface BackupInfo {
@@ -8,7 +7,10 @@ interface BackupInfo {
   modified: string;
 }
 
-export default function Backup() {
+// Backup management panel (superuser only — gated by the parent Settings
+// page). Lists, creates, downloads and deletes system backups.
+
+export default function BackupPanel() {
   const [backups, setBackups] = createSignal<BackupInfo[]>([]);
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
@@ -19,7 +21,7 @@ export default function Backup() {
   }
 
   onMount(() => {
-    if (auth.isSuperuser()) void load();
+    void load();
   });
 
   async function create() {
@@ -54,47 +56,45 @@ export default function Backup() {
   }
 
   return (
-    <div class="space-y-6">
+    <div class="space-y-4">
       <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-semibold">Backup</h1>
+        <h2 class="text-lg font-medium">Backups</h2>
         <button
           onClick={() => void create()}
-          disabled={busy() || !auth.isSuperuser()}
+          disabled={busy()}
           class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2 disabled:opacity-50"
         >
           {busy() ? 'Creating…' : 'Create backup'}
         </button>
       </div>
 
-      <Show when={auth.isSuperuser()} fallback={<p class="text-slate-500">Admin only.</p>}>
-        {error() && <p class="text-red-500 text-sm">{error()}</p>}
-        <Show
-          when={backups().length > 0}
-          fallback={<p class="text-slate-500">No backups yet.</p>}
-        >
-          <ul class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
-            <For each={backups()}>
-              {(b) => (
-                <li class="flex items-center justify-between p-3">
-                  <div>
-                    <div class="text-sm font-mono">{b.key}</div>
-                    <div class="text-xs text-slate-500">
-                      {sizeLabel(b.size)} · {b.modified}
-                    </div>
+      {error() && <p class="text-red-500 text-sm">{error()}</p>}
+      <Show
+        when={backups().length > 0}
+        fallback={<p class="text-slate-500">No backups yet.</p>}
+      >
+        <ul class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
+          <For each={backups()}>
+            {(b) => (
+              <li class="flex items-center justify-between p-3">
+                <div>
+                  <div class="text-sm font-mono">{b.key}</div>
+                  <div class="text-xs text-slate-500">
+                    {sizeLabel(b.size)} · {b.modified}
                   </div>
-                  <div class="flex gap-3">
-                    <a href={downloadUrl(b.key)} class="text-sm underline">
-                      Download
-                    </a>
-                    <button onClick={() => void remove(b.key)} class="text-sm underline text-red-600">
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              )}
-            </For>
-          </ul>
-        </Show>
+                </div>
+                <div class="flex gap-3">
+                  <a href={downloadUrl(b.key)} class="text-sm underline">
+                    Download
+                  </a>
+                  <button onClick={() => void remove(b.key)} class="text-sm underline text-red-600">
+                    Delete
+                  </button>
+                </div>
+              </li>
+            )}
+          </For>
+        </ul>
       </Show>
     </div>
   );
