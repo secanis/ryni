@@ -1,0 +1,316 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Release for RÝNI — runs on push of tags matching v* (e.g. v0.1.0).
+#
+# Job graph:
+#
+#   resolve ─── validates the tag (push or workflow_dispatch input)
+#       │
+#   test ─── the full CI suite (ci.yml via workflow_call) at that tag
+#       │
+#   build-images ─── multi-arch (linux/amd64 + linux/arm64), pushed to Docker Hub
+#       │
+#       ├──> bootstrap-gh-pages (parallel) ─── creates orphan branch if absent
+#       │        │
+#       │        └──> release-helm ─── packages chart, updates index.yaml
+#       │                              (helm repo on gh-pages)
+#       │
+#       └──> notify-artifacthub
+#
+# Required secrets:
+#   - DOCKERHUB_USERNAME   Docker Hub username
+#   - DOCKERHUB_TOKEN      Docker Hub access token (NOT the account password)
+#
+# Optional (for manual releases):
+#   - workflow_dispatch input `tag` (e.g. v0.1.0) to (re-)release an EXISTING
+#     tag without a tag push. Every job checks out that tag, not the branch
+#     the dispatch was started from.
+#
+# Security: inputs / event data never appear inside `run:` scripts as
+# ${{ }} expressions (script injection); they are passed via `env:` and
+# the tag is validated against a strict semver pattern in `resolve`.
+# Actions are pinned to commit SHAs (version in the trailing comment).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v0.1.0)'
+        required: true
+        default: ''
+
+# Don't cancel an in-progress release mid-flight
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Least privilege: read-only by default, write only on the jobs that push
+# to the gh-pages branch / create the chart release. Docker Hub uses its
+# own token, gh-pages is pushed with git (no Pages / OIDC API).
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 0. Resolve + validate the release tag once; every other job uses the
+  # outputs (never ${{ inputs.tag }} directly).
+  # -------------------------------------------------------------------------
+  resolve:
+    name: Resolve release tag
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      chart_version: ${{ steps.version.outputs.chart_version }}
+    steps:
+      - name: Resolve release tag
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::error::No tag resolved. Push a v* tag or pass 'tag' input."
+            exit 1
+          fi
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::Tag '$TAG' is not a valid release tag (expected vX.Y.Z or vX.Y.Z-pre)."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "chart_version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+  # -------------------------------------------------------------------------
+  # 0b. Full test suite at the release tag. Nothing is published unless it
+  # passes.
+  # -------------------------------------------------------------------------
+  test:
+    name: Test
+    needs: resolve
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.resolve.outputs.tag }}
+
+  # -------------------------------------------------------------------------
+  # 1. Build and push multi-arch images to Docker Hub (public, for distribution)
+  # -------------------------------------------------------------------------
+  build-images:
+    name: Build and push image (${{ matrix.name }})
+    needs: [resolve, test]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pocketbase
+            context: pocketbase
+            dockerfile: pocketbase/Dockerfile
+            registry: docker.io/secanis/ryni-pocketbase
+            repo: secanis/ryni-pocketbase
+            readme: docker/pocketbase.md
+            short_description: RÝNI backend — PocketBase v0.40 with RÝNI hooks and migrations.
+          - name: frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile
+            registry: docker.io/secanis/ryni-frontend
+            repo: secanis/ryni-frontend
+            readme: docker/frontend.md
+            short_description: RÝNI frontend — SolidJS SPA served by nginx-unprivileged, pairs with ryni-pocketbase.
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+      # QEMU for the linux/arm64 leg of the multi-arch build.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
+        id: meta
+        with:
+          images: ${{ matrix.registry }}
+          tags: |
+            # The exact tag (e.g. v0.1.0)
+            type=raw,value=${{ needs.resolve.outputs.tag }}
+            # Semver expansion: 0.1.0, 0.1, 0
+            type=semver,pattern={{version}},value=${{ needs.resolve.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.resolve.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.resolve.outputs.tag }}
+            # latest on main only
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: latest=auto
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=release-${{ matrix.name }}
+          cache-to: type=gha,mode=max
+          # Stamp the release tag into the PocketBase image (RYNI_VERSION env).
+          # The frontend image has no version build-arg; the extra arg is
+          # harmless there.
+          build-args: |
+            RYNI_VERSION=${{ needs.resolve.outputs.tag }}
+      # Sync the Docker Hub repo description + README (best-effort).
+      - name: Sync Docker Hub description
+        if: success()
+        continue-on-error: true
+        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77 # v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ matrix.repo }}
+          readme-filepath: ${{ matrix.readme }}
+          short-description: ${{ matrix.short_description }}
+
+  # -------------------------------------------------------------------------
+  # 2. Bootstrap the gh-pages branch (orphan + empty commit) so the
+  # index.yaml push step has somewhere to push on a fresh repo.
+  # -------------------------------------------------------------------------
+  bootstrap-gh-pages:
+    name: Bootstrap gh-pages branch
+    needs: build-images
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Ensure gh-pages branch exists on origin
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name  "github-actions[bot]"
+          if git ls-remote --heads origin gh-pages | grep -q gh-pages; then
+            echo "gh-pages already exists on origin — nothing to bootstrap"
+            exit 0
+          fi
+          echo "gh-pages missing on origin — bootstrapping with an empty commit"
+          git worktree add --detach /tmp/gh-pages-bootstrap
+          git -C /tmp/gh-pages-bootstrap config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C /tmp/gh-pages-bootstrap config user.name  "github-actions[bot]"
+          git -C /tmp/gh-pages-bootstrap rm -rfq .
+          git -C /tmp/gh-pages-bootstrap checkout --orphan gh-pages
+          git -C /tmp/gh-pages-bootstrap commit --allow-empty -m "chore: bootstrap gh-pages for helm repo"
+          git -C /tmp/gh-pages-bootstrap push origin gh-pages
+          git -C /tmp/gh-pages-bootstrap checkout --detach
+          git worktree remove --force /tmp/gh-pages-bootstrap
+
+  # -------------------------------------------------------------------------
+  # 3. Package and publish the helm chart
+  # Packages helm/ryni/ as a .tgz and attaches it to the release the tag
+  # points at, then regenerates index.yaml on gh-pages so `helm install`
+  # finds the chart.
+  # -------------------------------------------------------------------------
+  release-helm:
+    name: Package and publish helm chart
+    needs: [resolve, build-images, bootstrap-gh-pages]
+    runs-on: ubuntu-24.04
+    permissions:
+      # Uploads the .tgz to the existing release and pushes index.yaml to
+      # gh-pages.
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+          fetch-depth: 0
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+        with:
+          version: v4.2.2
+      - name: Update Chart.yaml (version + appVersion)
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+          CHART_VERSION: ${{ needs.resolve.outputs.chart_version }}
+        run: |
+          sed -i "s/^version: .*/version: $CHART_VERSION/" helm/ryni/Chart.yaml
+          sed -i "s/^appVersion: \".*\"/appVersion: \"$TAG\"/" helm/ryni/Chart.yaml
+          # Also sync values.yaml so `helm install` (without overrides) pulls
+          # the right images for this release.
+          sed -i "s|^\(\s*tag:\s*\).*|\1$TAG|" helm/ryni/values.yaml
+          echo "Updated Chart.yaml:"
+          grep -E "^(version|appVersion):" helm/ryni/Chart.yaml
+          echo "Updated image tags in values.yaml:"
+          grep -E "tag:" helm/ryni/values.yaml
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Package chart
+        env:
+          CHART_VERSION: ${{ needs.resolve.outputs.chart_version }}
+        run: |
+          mkdir -p .cr-release-packages
+          helm package helm/ryni --destination .cr-release-packages
+          ls -la .cr-release-packages
+          test -f ".cr-release-packages/ryni-${CHART_VERSION}.tgz"
+      - name: Attach chart package to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          CHART_VERSION: ${{ needs.resolve.outputs.chart_version }}
+        run: |
+          TGZ=".cr-release-packages/ryni-${CHART_VERSION}.tgz"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG does not exist yet — creating it"
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" "$TGZ" --clobber
+          echo "Uploaded $TGZ to release $TAG"
+      - name: Update Helm index on gh-pages
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+          CHART_VERSION: ${{ needs.resolve.outputs.chart_version }}
+        run: |
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+          mkdir -p /tmp/newchart
+          cp ".cr-release-packages/ryni-${CHART_VERSION}.tgz" /tmp/newchart/
+          git worktree add -B gh-pages /tmp/gh-pages-index origin/gh-pages
+          helm repo index /tmp/newchart --url "$REPO_URL" --merge /tmp/gh-pages-index/index.yaml
+          cp /tmp/newchart/index.yaml /tmp/gh-pages-index/index.yaml
+          # Artifact Hub reads artifacthub-repo.yaml from the helm repo root.
+          cp -v artifacthub-repo.yaml /tmp/gh-pages-index/artifacthub-repo.yaml || true
+          cd /tmp/gh-pages-index
+          if ! git diff --quiet index.yaml; then
+            git add index.yaml
+            git commit -m "ci: publish chart $CHART_VERSION (release $TAG)"
+            git push origin gh-pages
+          else
+            echo "index.yaml unchanged"
+          fi
+          git worktree remove --force /tmp/gh-pages-index
+
+  # -------------------------------------------------------------------------
+  # 4. Notify artifacthub.io (optional, best-effort)
+  # -------------------------------------------------------------------------
+  notify-artifacthub:
+    name: Trigger Artifact Hub re-index (optional)
+    runs-on: ubuntu-24.04
+    needs: release-helm
+    if: success()
+    continue-on-error: true
+    permissions: {}
+    steps:
+      - name: Ping Artifact Hub
+        run: |
+          REPO="https://secanis.github.io/ryni/"
+          echo "Notifying Artifact Hub to re-index $REPO"
+          curl -fsS -X POST \
+            -H "Content-Type: application/json" \
+            "https://artifacthub.io/api/v1/repositories/reindex" \
+            -d "{\"url\":\"$REPO\"}" || true

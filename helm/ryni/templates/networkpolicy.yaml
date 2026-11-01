@@ -1,0 +1,60 @@
+{{- /*
+NetworkPolicies (values: networkPolicy.*). Only ingress is restricted:
+  - PocketBase: reachable on its HTTP port only from the frontend pods
+    (nginx proxies /api/, /t/ and realtime) plus networkPolicy.pocketbase.extraFrom.
+  - Frontend: reachable on its HTTP port from anywhere, because the
+    ingress controller's namespace / labels differ per cluster.
+Egress stays open (OIDC, SMTP if configured, DNS).
+Inert unless the cluster's CNI enforces NetworkPolicies.
+*/ -}}
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ryni.pocketbase.fullname" . }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "ryni.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pocketbase
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ryni.pocketbase.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "ryni.frontend.selectorLabels" . | nindent 14 }}
+        # `helm test` pod (templates/tests/test-connection.yaml).
+        - podSelector:
+            matchLabels:
+              {{- include "ryni.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: helm-test
+        {{- with .Values.networkPolicy.pocketbase.extraFrom }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      ports:
+        - port: http
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ryni.frontend.fullname" . }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "ryni.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ryni.frontend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: http
+          protocol: TCP
+{{- end }}

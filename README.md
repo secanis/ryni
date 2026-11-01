@@ -75,6 +75,46 @@ Add `data-ryni-detailed` to re-fire on single-page-app route changes.
 | `PB_SUPERUSER_IPS` | Superuser IP allowlist |
 | `RYNI_BACKUP_INTERVAL` | Cron expression for scheduled backups (empty = off) |
 
+## Kubernetes / Helm
+
+A Helm chart lives in [`helm/ryni`](helm/ryni) (single-replica PocketBase +
+nginx-served frontend, Traefik/cert-manager Ingress, NetworkPolicies, and
+data-safe Secrets/PVC with `resource-policy: keep`).
+
+```bash
+helm repo add ryni https://secanis.github.io/ryni/
+helm repo update
+helm install ryni ryni/ryni \
+  --set ingress.hosts[0].host=analytics.example.com \
+  --set pocketbase.persistence.storageClass=longhorn
+```
+
+Fetch the auto-generated superuser credentials after install:
+
+```bash
+kubectl get secret -n ryni ryni-pocketbase-superuser \
+  -o jsonpath='{.data.PB_SUPERUSER_EMAIL}' | base64 -d; echo
+kubectl get secret -n ryni ryni-pocketbase-superuser \
+  -o jsonpath='{.data.PB_SUPERUSER_PASSWORD}' | base64 -d; echo
+```
+
+See [`helm/ryni/README.md`](helm/ryni/README.md) for the full parameter list
+and data-safety notes.
+
+## CI / CD
+
+- **CI** (`.github/workflows/ci.yml`) — frontend lint/typecheck/build/unit
+  tests, PocketBase integration tests, and `helm lint` + template render.
+- **CD** (`.github/workflows/release.yml`) — on a `v*` tag: runs CI, builds
+  multi-arch (amd64/arm64) images to Docker Hub, packages the chart, attaches
+  it to the release, and updates the Helm repo `index.yaml` on `gh-pages`.
+
+```bash
+# Local chart checks
+make lint-helm        # helm lint + render
+make test-helm        # full kind-based end-to-end test
+```
+
 ## Development
 
 ```bash
@@ -91,8 +131,10 @@ cd pocketbase && npm install && npm test
 .
 ├── frontend/         # SolidJS frontend + tracker script (src/tracker/)
 ├── pocketbase/       # PocketBase backend: pb_migrations/, pb_hooks/, tests/
+├── helm/ryni/        # Helm chart
+├── scripts/          # Helm chart test rig (test-helm.sh)
 ├── docker-compose.yml
-└── .github/workflows/ci.yml
+└── .github/workflows/ # ci.yml + release.yml
 ```
 
 ## License

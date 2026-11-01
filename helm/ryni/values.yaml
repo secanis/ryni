@@ -1,0 +1,226 @@
+# Default values for ryni.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Override the chart name (used in resource naming).
+nameOverride: ""
+# -- Override the fully-qualified app name (used in resource naming).
+fullnameOverride: ""
+
+# -- Namespace the chart installs into. The chart can optionally create it.
+namespace:
+  # -- Whether to create the namespace. When true, the chart uses a `lookup`
+  # expression so re-running on an existing namespace is a no-op.
+  create: true
+  # -- Name of the namespace to install into.
+  name: ryni
+
+image:
+  # -- Image pull secrets (referenced by name). Empty list for docker.io public
+  # images. Set this if you push to a private registry.
+  pullSecrets: []
+  # -- Image pull policy applied to both containers.
+  pullPolicy: IfNotPresent
+
+# -- ServiceAccount configuration. Both pods reference this SA; no RBAC is
+# attached today, but the SA is created explicitly so future hooks (or
+# external-secrets operators) can bind roles to it.
+serviceAccount:
+  # -- Whether to create a ServiceAccount.
+  create: true
+  # -- ServiceAccount name. If empty, the chart uses the fullname.
+  name: ""
+
+# -- PocketBase backend (single replica; sqlite is not HA-capable).
+pocketbase:
+  replicaCount: 1
+  image:
+    # -- PocketBase image repository.
+    repository: docker.io/secanis/ryni-pocketbase
+    # -- PocketBase image tag. Should match the RÝNI release (e.g. v0.1.0).
+    tag: v0.1.0
+    pullPolicy: ""
+  service:
+    # -- Kubernetes service type for PocketBase.
+    type: ClusterIP
+    # -- Port exposed by the PocketBase service.
+    port: 8090
+  # PocketBase stores everything in a single sqlite `data.db` (sites,
+  # page-view records, and heartbeats). Analytics data grows slowly — a
+  # few Gi is plenty for most self-hosted installs.
+  persistence:
+    # -- Whether to create a PVC for the PB data directory.
+    enabled: true
+    # -- PVC size.
+    size: 5Gi
+    # -- Storage class name. `longhorn` is the default on the target cluster.
+    # -- IMPORTANT: the StorageClass must have `reclaimPolicy: Retain` if you
+    # -- want the underlying PV (and your data) to survive PVC deletion or
+    # -- `helm uninstall`. This chart cannot enforce that policy from the PVC
+    # -- level; the value below is only a pointer. If your StorageClass uses
+    # -- `Delete` (the default for many provisioners including Longhorn), data
+    # -- will be destroyed when the PVC is deleted.
+    storageClass: longhorn
+    # -- PVC access modes.
+    accessModes:
+      - ReadWriteOnce
+  # -- PocketBase holds the sqlite page cache and JSVM pools in memory;
+  # 256Mi is a comfortable floor for typical analytics workloads.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  # -- Health check path (PB exposes /api/health). Probes always target the
+  # container port 8090 (named `http`); `service.port` only changes the
+  # Service port.
+  healthcheck:
+    path: /api/health
+  # -- startupProbe: allows up to failureThreshold * periodSeconds (default
+  # 150s) for the first boot (migrations, superuser upsert) before the
+  # liveness probe takes over.
+  startupProbe:
+    periodSeconds: 5
+    failureThreshold: 30
+  # -- Superuser login allowlist (space-separated IPs/CIDRs), passed as
+  # PB_SUPERUSER_IPS and applied by entrypoint.sh on every start. Empty =
+  # no restriction. NOTE: behind an ingress PB sees the ingress
+  # controller's pod IP unless PB's "trusted proxy" settings are configured,
+  # so restrict to client ranges only after configuring those.
+  superuserIps: ""
+  # -- PB_AUTOMIGRATE. `false` (default here) because the container root
+  # filesystem is read-only and migration files generated from dashboard
+  # edits would be lost on restart anyway. Shipped migrations are always
+  # applied on start regardless of this flag.
+  automigrate: false
+  # Hooks (pb_hooks/*.pb.js + pb_hooks/lib/*.js) and migrations are baked
+  # into the PocketBase image; the chart does not mount them.
+  # -- PB_SECRET source. EITHER supply an existing Secret (name + key),
+  # OR leave both empty and the chart will auto-generate a Secret on install.
+  secret:
+    # -- Name of an existing Kubernetes Secret containing PB_SECRET. If empty,
+    # the chart auto-generates one as a regular release resource that is
+    # re-used on upgrade (lookup) and kept on uninstall (resource-policy).
+    existingSecret: ""
+    # -- Key inside `existingSecret` that holds PB_SECRET value.
+    existingSecretKey: PB_SECRET
+  # -- First superuser credentials. The Secret is mounted into the pod as
+  # PB_SUPERUSER_EMAIL / PB_SUPERUSER_PASSWORD and entrypoint.sh creates
+  # the superuser headlessly on the first boot (`pocketbase superuser
+  # upsert`, guarded by a marker file in pb_data). The /setup wizard then
+  # only has to LOG IN with these credentials; the unauthenticated bootstrap
+  # page is never needed on a Helm install.
+  # To supply your own: create a Secret with two keys (email + password)
+  # and set `existingSecret` to its name. Leave empty to auto-generate.
+  # PB requires the password to be at least 8 characters.
+  superuser:
+    # -- Name of an existing Kubernetes Secret holding PB_SUPERUSER_EMAIL
+    # and PB_SUPERUSER_PASSWORD. If empty, the chart creates one on
+    # install with a random 24-char password. It is a regular release
+    # resource: re-used on upgrade / re-install (lookup) and kept on
+    # uninstall (resource-policy), so it never drifts from the password
+    # entrypoint.sh applied on the first boot.
+    existingSecret: ""
+    # -- Key inside `existingSecret` that holds the email value.
+    existingSecretEmailKey: PB_SUPERUSER_EMAIL
+    # -- Key inside `existingSecret` that holds the password value.
+    existingSecretPasswordKey: PB_SUPERUSER_PASSWORD
+  podSecurityContext:
+    # -- Run PB as the `pocketbase` user (uid 1000 in the image).
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Container-level securityContext. The root filesystem is read-only;
+  # /tmp is an emptyDir and /app/pb_data the PVC.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+    seccompProfile:
+      type: RuntimeDefault
+
+# -- SolidJS frontend served by nginx.
+frontend:
+  replicaCount: 2
+  image:
+    # -- Frontend image repository.
+    repository: docker.io/secanis/ryni-frontend
+    # -- Frontend image tag. Should match the RÝNI release.
+    tag: v0.1.0
+    pullPolicy: ""
+  service:
+    # -- Kubernetes service type for the frontend.
+    type: ClusterIP
+    # -- Port exposed by the frontend service.
+    # --   Default 8080: the nginx-unprivileged image listens on 8080
+    # --   (designed to run as non-root). Use 80 only if you switch to
+    # --   the standard nginx image and grant NET_BIND_SERVICE.
+    port: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 101   # `nginx` user in nginxinc/nginx-unprivileged
+    runAsGroup: 101
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Container-level securityContext. The root filesystem is read-only;
+  # nginx writes its pid/temp files to /tmp and /var/cache/nginx (both
+  # emptyDirs), and the runtime config (config.js) goes to /tmp/ryni
+  # (an emptyDir) written by the entrypoint at start.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+    seccompProfile:
+      type: RuntimeDefault
+
+# -- NetworkPolicies (require a CNI that enforces them, e.g. Calico, Cilium;
+# without one they are inert). When enabled, PocketBase only accepts traffic
+# on its HTTP port from the frontend pods (plus `pocketbase.extraFrom`);
+# the frontend accepts traffic on its HTTP port from anywhere (the ingress
+# controller's namespace/labels differ per cluster). Egress is not
+# restricted (PB needs OIDC, SMTP if configured). Enabled by default because
+# the chart's Ingress only routes to the frontend.
+networkPolicy:
+  enabled: true
+  pocketbase:
+    # -- Additional `from` peers allowed to reach PocketBase (NetworkPolicy
+    # peer syntax), e.g. a monitoring namespace or a backup job.
+    extraFrom: []
+    # - namespaceSelector:
+    #     matchLabels:
+    #       kubernetes.io/metadata.name: monitoring
+
+# -- Ingress configuration. Defaults to Traefik + cert-manager.
+ingress:
+  # -- Whether to create an Ingress resource.
+  enabled: true
+  # -- IngressClass name. `traefik` is the cluster's default.
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  # -- Ingress hosts. Override the `host` field at install time.
+  hosts:
+    - host: ryni.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- TLS configuration. The cert-manager annotation above issues the cert.
+  tls:
+    - hosts:
+        - ryni.example.com
+      secretName: ryni-tls
