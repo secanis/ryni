@@ -9,9 +9,10 @@
 // list/view rules compare it against `@request.auth.id`), so a text column
 // is the right shape.
 //
-// This is a follow-up to 1740000000 (which now creates it as text for fresh
-// installs); it upgrades instances that applied the old relation version.
-// Idempotent: no-ops when the field is missing or already text.
+// Idempotent: no-ops when the field is missing or already text. (This is a
+// fresh timestamp because the earlier 1740000001 carried a `field.type`
+// bug — comparing the method instead of calling `field.type()` — so any
+// instance that already applied it never actually converted the field.)
 
 migrate(
   (app) => {
