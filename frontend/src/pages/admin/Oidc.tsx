@@ -2,13 +2,16 @@ import { createSignal, Show } from 'solid-js';
 import { auth } from '~/stores/auth';
 import { pb } from '~/services/pocketbase';
 
-// Superuser-only OIDC configuration. Saves to the backend route implemented
-// by the OIDC hook (pb_hooks/oidc.pb.js).
+// Superuser-only OIDC configuration. Registers the "oidc" provider on the
+// `users` collection via the backend route (pb_hooks/oidc.pb.js).
 
 export default function Oidc() {
-  const [issuer, setIssuer] = createSignal('');
+  const [displayName, setDisplayName] = createSignal('OIDC');
   const [clientId, setClientId] = createSignal('');
   const [clientSecret, setClientSecret] = createSignal('');
+  const [authUrl, setAuthUrl] = createSignal('');
+  const [tokenUrl, setTokenUrl] = createSignal('');
+  const [userInfoUrl, setUserInfoUrl] = createSignal('');
   const [message, setMessage] = createSignal('');
   const [error, setError] = createSignal('');
   const [busy, setBusy] = createSignal(false);
@@ -21,7 +24,14 @@ export default function Oidc() {
     try {
       await pb.send('/api/ryni/oidc', {
         method: 'POST',
-        body: { issuer: issuer(), clientId: clientId(), clientSecret: clientSecret() },
+        body: {
+          displayName: displayName(),
+          clientId: clientId(),
+          clientSecret: clientSecret(),
+          authUrl: authUrl(),
+          tokenUrl: tokenUrl(),
+          userInfoUrl: userInfoUrl(),
+        },
       });
       setMessage('OIDC provider saved.');
     } catch (err) {
@@ -31,6 +41,8 @@ export default function Oidc() {
     }
   }
 
+  const field = 'w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700';
+
   return (
     <div class="space-y-6 max-w-md">
       <h1 class="text-2xl font-semibold">OIDC / SSO</h1>
@@ -38,38 +50,51 @@ export default function Oidc() {
       <Show when={auth.isSuperuser()} fallback={<p class="text-slate-500">Admin only.</p>}>
         <form onSubmit={onSubmit} class="space-y-4">
           <div>
-            <label for="issuer" class="block text-sm mb-1">
-              Issuer URL
-            </label>
-            <input
-              id="issuer"
-              value={issuer()}
-              onInput={(e) => setIssuer(e.currentTarget.value)}
-              placeholder="https://auth.example.com"
-              class="w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700"
-            />
+            <label class="block text-sm mb-1">Display name</label>
+            <input value={displayName()} onInput={(e) => setDisplayName(e.currentTarget.value)} class={field} />
           </div>
           <div>
-            <label for="clientId" class="block text-sm mb-1">
-              Client ID
-            </label>
-            <input
-              id="clientId"
-              value={clientId()}
-              onInput={(e) => setClientId(e.currentTarget.value)}
-              class="w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700"
-            />
+            <label class="block text-sm mb-1">Client ID</label>
+            <input value={clientId()} onInput={(e) => setClientId(e.currentTarget.value)} class={field} required />
           </div>
           <div>
-            <label for="clientSecret" class="block text-sm mb-1">
-              Client secret
-            </label>
+            <label class="block text-sm mb-1">Client secret</label>
             <input
-              id="clientSecret"
               type="password"
               value={clientSecret()}
               onInput={(e) => setClientSecret(e.currentTarget.value)}
-              class="w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700"
+              class={field}
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">Authorization URL</label>
+            <input
+              value={authUrl()}
+              onInput={(e) => setAuthUrl(e.currentTarget.value)}
+              placeholder="https://auth.example.com/realms/x/protocol/openid-connect/auth"
+              class={field}
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">Token URL</label>
+            <input
+              value={tokenUrl()}
+              onInput={(e) => setTokenUrl(e.currentTarget.value)}
+              placeholder="https://auth.example.com/realms/x/protocol/openid-connect/token"
+              class={field}
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">User info URL</label>
+            <input
+              value={userInfoUrl()}
+              onInput={(e) => setUserInfoUrl(e.currentTarget.value)}
+              placeholder="https://auth.example.com/realms/x/protocol/openid-connect/userinfo"
+              class={field}
+              required
             />
           </div>
           {error() && <p class="text-red-500 text-sm">{error()}</p>}
