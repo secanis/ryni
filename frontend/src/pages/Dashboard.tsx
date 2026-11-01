@@ -1,17 +1,21 @@
 import { createEffect, createSignal, Show } from 'solid-js';
 import { useParams } from '@solidjs/router';
 import { statsStore } from '~/stores/stats';
+import { sitesStore } from '~/stores/sites';
+import type { Site } from '~/types';
 import StatCard from '~/components/dashboard/StatCard';
 import DateRange, { type DateRangeValue } from '~/components/dashboard/DateRange';
 import TimeSeries from '~/components/charts/TimeSeries';
 import Breakdown from '~/components/charts/Breakdown';
 import ShareDialog from '~/components/sites/ShareDialog';
+import CopyButton from '~/components/ui/CopyButton';
 
 export default function Dashboard() {
   const params = useParams();
   const siteId = () => params.id;
   const [selected, setSelected] = createSignal('7d');
   const [shareOpen, setShareOpen] = createSignal(false);
+  const [site, setSite] = createSignal<Site | null>(null);
   const [range, setRange] = createSignal<DateRangeValue>({
     from: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
     to: new Date().toISOString(),
@@ -20,6 +24,11 @@ export default function Dashboard() {
   createEffect(() => {
     const id = siteId();
     if (id) void statsStore.load(id, range());
+  });
+
+  createEffect(() => {
+    const id = siteId();
+    if (id) void sitesStore.get(id).then(setSite);
   });
 
   function onRange(next: DateRangeValue) {
@@ -34,7 +43,13 @@ export default function Dashboard() {
   return (
     <div class="space-y-6">
       <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-semibold">Dashboard</h1>
+        <div>
+          <h1 class="text-2xl font-semibold">{site()?.name ?? 'Dashboard'}</h1>
+          <div class="text-sm text-slate-500 font-mono flex items-center gap-2 mt-1">
+            <span>{site()?.tracking_id ?? ''}</span>
+            <CopyButton text={site()?.tracking_id ?? ''} />
+          </div>
+        </div>
         <div class="flex items-center gap-3">
           <button
             onClick={() => setShareOpen(true)}

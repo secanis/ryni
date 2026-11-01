@@ -29,6 +29,10 @@ async function create(data: {
   return rec as unknown as Site;
 }
 
+async function get(id: string): Promise<Site> {
+  return (await pb.collection('sites').getOne(id)) as unknown as Site;
+}
+
 async function remove(id: string): Promise<void> {
   await pb.collection('sites').delete(id);
   setSites((prev) => prev.filter((s) => s.id !== id));
@@ -44,4 +48,4 @@ async function share(id: string, userId: string, role: 'viewer' | 'manager'): Pr
   await load();
 }
 
-export const sitesStore = { sites, loading, load, create, remove, share };
+export const sitesStore = { sites, loading, load, create, get, remove, share };
