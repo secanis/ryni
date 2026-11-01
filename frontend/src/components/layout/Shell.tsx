@@ -26,6 +26,9 @@ export default function Shell(props: ParentProps) {
               <a href="/admin/oidc" class="hover:underline">
                 OIDC
               </a>
+              <a href="/admin/backup" class="hover:underline">
+                Backup
+              </a>
             </nav>
           </Show>
         </div>
