@@ -179,6 +179,7 @@ function handler(e) {
     }
 
     var rec = new Record($app.findCollectionByNameOrId('records'));
+    rec.set('created', new Date().toISOString());
     rec.set('site', siteId);
     rec.set('visitor_id', visitor);
     rec.set('path', str(body.page, 1000));

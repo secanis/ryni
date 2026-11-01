@@ -99,7 +99,9 @@ migrate(
     // ---------------------------------------------------------------------
     const records = ensureCollection('records');
     addFields(records, [
-      new AutodateField({ name: 'created', onCreate: true, onUpdate: false }),
+      // Plain DateField (not autodate): ingest stamps it, and it allows
+      // backfilling + deterministic timestamps in tests.
+      new DateField({ name: 'created' }),
       new RelationField({ name: 'site', collectionId: sites.id, maxSelect: 1, cascadeDelete: true }),
       new TextField({ name: 'visitor_id', required: true, max: 100 }),
       new TextField({ name: 'path', max: 1000 }),
