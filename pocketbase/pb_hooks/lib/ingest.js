@@ -123,7 +123,7 @@ function handler(e) {
 
     var site = null;
     try {
-        site = $app.findFirstRecordByFilter('sites', 'endpoint_slug={:s}', { s: slug });
+        site = $app.findFirstRecordByFilter('sites', 'endpoint_slug={:s} || tracking_id={:s}', { s: slug });
     } catch (_) {}
 
     if (!site) {

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run typecheck && node scripts/build-tracker.mjs && vite build",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
@@ -25,6 +25,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@types/node": "^26.2.0",
     "autoprefixer": "^10.4.20",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "eslint-plugin-solid": "^0.18.1",
     "globals": "^17.13.0",
