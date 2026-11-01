@@ -1,12 +1,29 @@
-import { Router, Route } from '@solidjs/router';
+import { lazy, Show, type ParentProps } from 'solid-js';
+import { Router, Route, Navigate } from '@solidjs/router';
+import { auth } from '~/stores/auth';
+
+const Login = lazy(() => import('~/pages/Login'));
+const Setup = lazy(() => import('~/pages/Setup'));
+const Shell = lazy(() => import('~/components/layout/Shell'));
+
+function RequireAuth(props: ParentProps) {
+  return (
+    <Show when={auth.ready()} fallback={<div class="p-8 text-slate-500">Loading…</div>}>
+      <Show when={auth.isAuthenticated()} fallback={<Navigate href="/login" />}>
+        <Shell>{props.children}</Shell>
+      </Show>
+    </Show>
+  );
+}
 
 export default function App() {
   return (
     <Router>
-      <Route
-        path="/"
-        component={() => <h1 class="p-8 text-2xl font-semibold">RÝNI</h1>}
-      />
+      <Route path="/login" component={Login} />
+      <Route path="/setup" component={Setup} />
+      <Route path="/" component={RequireAuth}>
+        <Route path="/" component={() => <h1 class="text-2xl font-semibold">Sites</h1>} />
+      </Route>
     </Router>
   );
 }
