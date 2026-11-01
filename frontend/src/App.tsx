@@ -4,6 +4,8 @@ import { auth } from '~/stores/auth';
 
 const Login = lazy(() => import('~/pages/Login'));
 const Setup = lazy(() => import('~/pages/Setup'));
+const Sites = lazy(() => import('~/pages/Sites'));
+const SiteNew = lazy(() => import('~/pages/SiteNew'));
 const Shell = lazy(() => import('~/components/layout/Shell'));
 
 function RequireAuth(props: ParentProps) {
@@ -22,7 +24,8 @@ export default function App() {
       <Route path="/login" component={Login} />
       <Route path="/setup" component={Setup} />
       <Route path="/" component={RequireAuth}>
-        <Route path="/" component={() => <h1 class="text-2xl font-semibold">Sites</h1>} />
+        <Route path="/" component={Sites} />
+        <Route path="/sites/new" component={SiteNew} />
       </Route>
     </Router>
   );

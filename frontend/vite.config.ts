@@ -18,12 +18,20 @@ export default defineConfig({
         target: pbUrl,
         changeOrigin: true,
       },
+      '/t/': {
+        target: pbUrl,
+        changeOrigin: true,
+      },
     },
   },
   preview: {
     port: 4173,
     proxy: {
       '/api/': {
+        target: pbUrl,
+        changeOrigin: true,
+      },
+      '/t/': {
         target: pbUrl,
         changeOrigin: true,
       },
