@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# kind cluster config for the RÝNI helm chart test rig.
+# 1 control-plane + 1 worker — enough for the two deployments.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ryni-test
+nodes:
+  - role: control-plane
+  - role: worker

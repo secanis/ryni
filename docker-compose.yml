@@ -1,0 +1,42 @@
+services:
+    pocketbase:
+        build:
+            context: ./pocketbase
+            dockerfile: Dockerfile
+        ports:
+            # Bound to loopback only — the frontend proxies /api/ and /t/ to
+            # PocketBase over the compose network. Keep it loopback (or remove
+            # it); never publish 0.0.0.0 on an exposed host.
+            - '127.0.0.1:8090:8090'
+        volumes:
+            - pb_data:/app/pb_data
+            - ./pocketbase/pb_hooks:/app/pb_hooks
+        environment:
+            - PB_SUPERUSER_EMAIL=${PB_SUPERUSER_EMAIL:-}
+            - PB_SUPERUSER_PASSWORD=${PB_SUPERUSER_PASSWORD:-}
+            - PB_SECRET=${PB_SECRET:-}
+            - PB_AUTOMIGRATE=${PB_AUTOMIGRATE:-true}
+            - PB_SUPERUSER_IPS=${PB_SUPERUSER_IPS:-127.0.0.1 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8090/api/health']
+            interval: 15s
+            timeout: 5s
+            retries: 3
+
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        ports:
+            - '3000:8080'
+        depends_on:
+            - pocketbase
+        restart: unless-stopped
+
+volumes:
+    pb_data:
+
+networks:
+    default:
+        name: ryni-network

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Artifact Hub repository configuration.
+# Reference: https://artifacthub.io/docs/topics/repositories/helm-charts
+#
+# This file is OPTIONAL. It's used by Artifact Hub to verify ownership of
+# a Helm repository. Once the chart is published to gh-pages, add the
+# gh-pages URL (https://secanis.github.io/ryni/) to Artifact Hub via
+# the "Add Source" UI.
+repositoryID: 00000000-0000-0000-0000-000000000000
+owners:
+  - name: secanis
+    email: support@secanis.ch

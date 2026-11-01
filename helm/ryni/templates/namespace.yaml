@@ -1,0 +1,27 @@
+{{- /*
+Render the Namespace whenever the chart is told to manage it.
+
+NOTE: do NOT add a `lookup` here. With a lookup, on `helm upgrade` the
+template would render nothing (the NS already exists), which makes
+Helm think the resource has been removed from the release — Helm then
+calls `kubectl delete namespace`, which cascades through the PVC, the
+deployments, and the data. `resource-policy: keep` below blocks the
+delete on `helm uninstall`, but a deleted-on-upgrade path is a worse
+failure mode (cascades through PVC) and the keep annotation does NOT
+block that path.
+
+Pick ONE: `namespace.create: true` (the chart creates the NS) OR
+`helm install --create-namespace` with `namespace.create: false`.
+*/ -}}
+{{- if .Values.namespace.create -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name }}
+  labels:
+    {{- include "ryni.labels" . | nindent 4 }}
+    app.kubernetes.io/component: namespace
+  annotations:
+    # Never let Helm delete this namespace.
+    "helm.sh/resource-policy": keep
+{{- end -}}

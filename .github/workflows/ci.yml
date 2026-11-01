@@ -1,0 +1,99 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# CI for RÝNI — runs on PRs and pushes, and is called by release.yml
+# (workflow_call) so releases are gated on a green test suite.
+#
+# Jobs:
+#   - test-frontend: lint + typecheck + build + vitest unit tests
+#   - test-pb:       vitest integration tests in pocketbase
+#   - lint-helm:     helm lint + template render check
+#
+# Actions are pinned to commit SHAs (version in the trailing comment).
+# Required secrets: none.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  # release.yml calls this workflow so a release is only published when
+  # the test suite is green.
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to test (empty = the triggering ref)'
+        type: string
+        default: ''
+
+# Cancel in-progress runs of the same workflow when a new commit lands.
+# Only for push / pull_request: when called from release.yml
+# (workflow_call), github.workflow is the CALLER's name.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Frontend: lint + typecheck + build + unit tests
+  # -------------------------------------------------------------------------
+  test-frontend:
+    name: Frontend (build + unit tests)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+
+  # -------------------------------------------------------------------------
+  # PocketBase: vitest integration tests (need a running PB)
+  # -------------------------------------------------------------------------
+  test-pb:
+    name: PocketBase (vitest)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: pocketbase
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: pocketbase/package-lock.json
+      - run: npm ci
+      # setup.ts auto-builds the test image (localhost/ryni-pocketbase:test)
+      # if missing, then spins up a PB container on --network=host.
+      - run: npm test
+
+  # -------------------------------------------------------------------------
+  # Helm chart: lint + template render
+  # -------------------------------------------------------------------------
+  lint-helm:
+    name: Helm chart (lint + render)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+        with:
+          version: v4.2.2
+      - name: Run lint
+        run: make lint-helm

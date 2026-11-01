@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ryni.pocketbase.fullname" . }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "ryni.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pocketbase
+spec:
+  replicas: {{ .Values.pocketbase.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ryni.pocketbase.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "ryni.pocketbase.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "ryni.serviceAccountName" . }}
+      # Neither container talks to the Kubernetes API.
+      automountServiceAccountToken: false
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.pocketbase.podSecurityContext | nindent 8 }}
+      containers:
+        - name: pocketbase
+          image: "{{ .Values.pocketbase.image.repository }}:{{ .Values.pocketbase.image.tag }}"
+          imagePullPolicy: {{ .Values.pocketbase.image.pullPolicy | default .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.pocketbase.containerSecurityContext | nindent 12 }}
+          # No args: entrypoint.sh runs `pocketbase serve` on 0.0.0.0:8090
+          # with --dir/--hooksDir/--encryptionEnv. The container port is
+          # fixed; `pocketbase.service.port` only changes the Service port
+          # (targetPort: http), so probes and the listener never disagree.
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+          env:
+            - name: PB_AUTOMIGRATE
+              value: {{ .Values.pocketbase.automigrate | toString | quote }}
+            - name: PB_SUPERUSER_IPS
+              value: {{ .Values.pocketbase.superuserIps | default "" | quote }}
+            - name: PB_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ryni.pocketbase.secretName" . }}
+                  key: {{ .Values.pocketbase.secret.existingSecretKey | default "PB_SECRET" }}
+            # entrypoint.sh runs `pocketbase superuser upsert` on the first
+            # boot when both vars are set (guarded by a marker file in
+            # pb_data), so the /setup page only ever needs to log in.
+            - name: PB_SUPERUSER_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ryni.pocketbase.superuserSecretName" . }}
+                  key: {{ .Values.pocketbase.superuser.existingSecretEmailKey | default "PB_SUPERUSER_EMAIL" }}
+            - name: PB_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ryni.pocketbase.superuserSecretName" . }}
+                  key: {{ .Values.pocketbase.superuser.existingSecretPasswordKey | default "PB_SUPERUSER_PASSWORD" }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.pocketbase.healthcheck.path }}
+              port: http
+            periodSeconds: {{ .Values.pocketbase.startupProbe.periodSeconds }}
+            timeoutSeconds: 3
+            failureThreshold: {{ .Values.pocketbase.startupProbe.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.pocketbase.healthcheck.path }}
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.pocketbase.healthcheck.path }}
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.pocketbase.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/pb_data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          {{- if .Values.pocketbase.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "ryni.pocketbase.fullname" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
