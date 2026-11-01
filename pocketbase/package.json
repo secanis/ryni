@@ -1,0 +1,19 @@
+{
+  "name": "ryni-pocketbase",
+  "version": "1.0.0",
+  "description": "PocketBase backend + integration tests for RÝNI",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.3.0",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "pocketbase": "^0.28.1"
+  }
+}
