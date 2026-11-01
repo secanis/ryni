@@ -45,3 +45,14 @@ export interface Snippets {
   variantB: string;
   proxyNote: string;
 }
+
+export interface SiteMember {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface SiteMembers {
+  managers: SiteMember[];
+  viewers: SiteMember[];
+}

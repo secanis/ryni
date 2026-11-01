@@ -1,6 +1,6 @@
 import { createSignal } from 'solid-js';
 import { pb } from '~/services/pocketbase';
-import type { Site } from '~/types';
+import type { Site, SiteMembers } from '~/types';
 
 const [sites, setSites] = createSignal<Site[]>([]);
 const [loading, setLoading] = createSignal(false);
@@ -33,6 +33,13 @@ async function get(id: string): Promise<Site> {
   return (await pb.collection('sites').getOne(id)) as unknown as Site;
 }
 
+// Resolve a site's managers/viewers to displayable members via the server
+// route (the `users` collection is self-only to regular users, so the
+// relations can't be expanded client-side).
+async function getMembers(id: string): Promise<SiteMembers> {
+  return (await pb.send(`/api/ryni/sites/${id}/members`, {})) as SiteMembers;
+}
+
 async function remove(id: string): Promise<void> {
   await pb.collection('sites').delete(id);
   setSites((prev) => prev.filter((s) => s.id !== id));
@@ -48,4 +55,4 @@ async function share(id: string, userId: string, role: 'viewer' | 'manager'): Pr
   await load();
 }
 
-export const sitesStore = { sites, loading, load, create, get, remove, share };
+export const sitesStore = { sites, loading, load, create, get, getMembers, remove, share };

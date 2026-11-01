@@ -1,8 +1,8 @@
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createEffect, createSignal, For, Show } from 'solid-js';
 import { useParams } from '@solidjs/router';
 import { statsStore } from '~/stores/stats';
 import { sitesStore } from '~/stores/sites';
-import type { Site } from '~/types';
+import type { Site, SiteMembers } from '~/types';
 import StatCard from '~/components/dashboard/StatCard';
 import DateRange, { type DateRangeValue } from '~/components/dashboard/DateRange';
 import TimeSeries from '~/components/charts/TimeSeries';
@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [selected, setSelected] = createSignal('7d');
   const [shareOpen, setShareOpen] = createSignal(false);
   const [site, setSite] = createSignal<Site | null>(null);
+  const [members, setMembers] = createSignal<SiteMembers | null>(null);
   const [range, setRange] = createSignal<DateRangeValue>({
     from: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
     to: new Date().toISOString(),
@@ -29,6 +30,11 @@ export default function Dashboard() {
   createEffect(() => {
     const id = siteId();
     if (id) void sitesStore.get(id).then(setSite);
+  });
+
+  createEffect(() => {
+    const id = siteId();
+    if (id) void sitesStore.getMembers(id).then(setMembers).catch(() => setMembers(null));
   });
 
   function onRange(next: DateRangeValue) {
@@ -49,6 +55,26 @@ export default function Dashboard() {
             <span>{site()?.tracking_id ?? ''}</span>
             <CopyButton text={site()?.tracking_id ?? ''} />
           </div>
+          <Show when={members()}>
+            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+              <For each={members()!.managers}>
+                {(m) => (
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                    <span class="font-medium">{m.name || m.email}</span>
+                    <span class="opacity-70">manager</span>
+                  </span>
+                )}
+              </For>
+              <For each={members()!.viewers}>
+                {(m) => (
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span class="font-medium">{m.name || m.email}</span>
+                    <span class="opacity-70">viewer</span>
+                  </span>
+                )}
+              </For>
+            </div>
+          </Show>
         </div>
         <div class="flex items-center gap-3">
           <button
