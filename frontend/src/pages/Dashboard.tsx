@@ -8,6 +8,7 @@ import DateRange, { type DateRangeValue } from '~/components/dashboard/DateRange
 import TimeSeries from '~/components/charts/TimeSeries';
 import Breakdown from '~/components/charts/Breakdown';
 import ShareDialog from '~/components/sites/ShareDialog';
+import SiteSettingsDialog from '~/components/sites/SiteSettingsDialog';
 import CopyButton from '~/components/ui/CopyButton';
 
 export default function Dashboard() {
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const siteId = () => params.id;
   const [selected, setSelected] = createSignal('7d');
   const [shareOpen, setShareOpen] = createSignal(false);
+  const [settingsOpen, setSettingsOpen] = createSignal(false);
   const [site, setSite] = createSignal<Site | null>(null);
   const [members, setMembers] = createSignal<SiteMembers | null>(null);
   const [range, setRange] = createSignal<DateRangeValue>({
@@ -83,12 +85,26 @@ export default function Dashboard() {
           >
             Share
           </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            class="px-3 py-1 rounded text-sm border border-slate-300 dark:border-slate-700"
+          >
+            Edit
+          </button>
           <DateRange selected={selected()} onChange={onRange} />
         </div>
       </div>
 
       <Show when={shareOpen()}>
         <ShareDialog siteId={siteId() || ''} onClose={() => setShareOpen(false)} />
+      </Show>
+
+      <Show when={settingsOpen() && site()}>
+        <SiteSettingsDialog
+          site={site()!}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={setSite}
+        />
       </Show>
 
       <Show when={!statsStore.loading() && s()} fallback={<p class="text-slate-500">Loading…</p>}>

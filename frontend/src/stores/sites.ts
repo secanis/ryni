@@ -33,6 +33,15 @@ async function get(id: string): Promise<Site> {
   return (await pb.collection('sites').getOne(id)) as unknown as Site;
 }
 
+async function update(
+  id: string,
+  data: { name: string; allowed_origins: string[] },
+): Promise<Site> {
+  const rec = await pb.collection('sites').update(id, data);
+  await load();
+  return rec as unknown as Site;
+}
+
 // Resolve a site's managers/viewers to displayable members via the server
 // route (the `users` collection is self-only to regular users, so the
 // relations can't be expanded client-side).
@@ -55,4 +64,4 @@ async function share(id: string, userId: string, role: 'viewer' | 'manager'): Pr
   await load();
 }
 
-export const sitesStore = { sites, loading, load, create, get, getMembers, remove, share };
+export const sitesStore = { sites, loading, load, create, get, update, getMembers, remove, share };

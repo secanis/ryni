@@ -1,7 +1,7 @@
-import { createSignal } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import { buildSnippets, type SnippetInput } from '~/utils/snippet';
 
-export default function Snippet(props: { input: SnippetInput; onDone: () => void }) {
+export default function Snippet(props: { input: SnippetInput; onDone?: () => void }) {
   const snippets = () => buildSnippets(props.input);
   const [copied, setCopied] = createSignal('');
 
@@ -50,12 +50,14 @@ export default function Snippet(props: { input: SnippetInput; onDone: () => void
         </pre>
       </div>
 
-      <button
-        onClick={() => props.onDone()}
-        class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2"
-      >
-        Done
-      </button>
+      <Show when={props.onDone}>
+        <button
+          onClick={() => props.onDone!()}
+          class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2"
+        >
+          Done
+        </button>
+      </Show>
     </div>
   );
 }
