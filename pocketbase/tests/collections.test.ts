@@ -131,4 +131,17 @@ describe('collections', () => {
 
     await expectRejected(a.pb.collection('heartbeats').create({ site: 'x', visitor_id: 'v' }), 403);
   });
+
+  it('lets a superuser create a site (created_by is a plain marker, not a relation)', async () => {
+    const admin = await createAdminClient();
+    const trackingId = rand();
+    const site = await admin.collection('sites').create({
+      name: 'Super Site',
+      tracking_id: trackingId,
+      endpoint_slug: trackingId,
+      allowed_origins: [],
+      created_by: admin.authStore.model?.id,
+    });
+    expect(site.id).toBeTruthy();
+  });
 });

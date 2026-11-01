@@ -74,7 +74,10 @@ migrate(
       new TextField({ name: 'tracking_id', required: true, min: 1, max: 20 }),
       new JSONField({ name: 'allowed_origins', maxSize: 100000 }),
       new TextField({ name: 'endpoint_slug', required: true, min: 1, max: 100 }),
-      new RelationField({ name: 'created_by', collectionId: usersId, maxSelect: 1, cascadeDelete: false }),
+      // A plain string marker, NOT a relation: the creator may be a superuser
+      // (its id lives in `_superusers`, not `users`), so a RelationField would
+      // reject superuser-created sites with "missing rel records".
+      new TextField({ name: 'created_by', max: 100 }),
       new RelationField({ name: 'managers', collectionId: usersId, maxSelect: 99, cascadeDelete: false }),
       new RelationField({ name: 'viewers', collectionId: usersId, maxSelect: 99, cascadeDelete: false }),
     ]);
