@@ -8,9 +8,14 @@ export default function Snippet(props: { input: SnippetInput; onDone?: () => voi
   return (
     <div class="space-y-6 max-w-2xl">
       <div class="p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="font-semibold">Variant A — direct</h2>
-          <CopyButton text={snippets().variantA} label="Copy snippet" />
+        <div class="mb-2">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold">Direct</h2>
+            <CopyButton text={snippets().variantA} label="Copy snippet" />
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Easiest, but adblockers can block it.
+          </p>
         </div>
         <pre class="text-xs bg-slate-100 dark:bg-slate-800 p-3 rounded overflow-x-auto">
           {snippets().variantA}
@@ -18,9 +23,14 @@ export default function Snippet(props: { input: SnippetInput; onDone?: () => voi
       </div>
 
       <div class="p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="font-semibold">Variant B — proxy (same origin)</h2>
-          <CopyButton text={snippets().variantB} label="Copy snippet" />
+        <div class="mb-2">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold">Proxy</h2>
+            <CopyButton text={snippets().variantB} label="Copy snippet" />
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Adblock-proof, needs a small server setup.
+          </p>
         </div>
         <pre class="text-xs bg-slate-100 dark:bg-slate-800 p-3 rounded overflow-x-auto">
           {snippets().variantB}

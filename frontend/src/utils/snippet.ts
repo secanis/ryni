@@ -23,7 +23,7 @@ export function buildSnippets(input: SnippetInput): Snippets {
   const variantA = `<script async src="${server}/ryni.js" data-ryni-server="${server}" data-ryni-site="${input.site}"${detailed}></script>`;
   const variantB = `<script async src="/ryni.js" data-ryni-site="${input.site}"${detailed}></script>`;
   const proxyNote = [
-    'Variant B runs fully on your own origin, so adblockers see only same-origin requests.',
+    'The proxy runs fully on your own origin, so adblockers see only same-origin requests.',
     '',
     '1. Serve the tracker on your site: copy ryni.js into your static assets, or proxy /ryni.js to ' + server + '.',
     '2. Forward the tracking endpoint (nginx example):',
