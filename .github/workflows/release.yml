@@ -296,12 +296,63 @@ jobs:
           git worktree remove --force /tmp/gh-pages-index
 
   # -------------------------------------------------------------------------
-  # 4. Notify artifacthub.io (optional, best-effort)
+  # 4. Publish the static site to gh-pages. The site is a minimal landing
+  # page (site/index.html, no build step) that doubles as the helm repo root;
+  # `@@CHART_VERSION@@` is substituted with the release's chart version, and
+  # the site is rsynced on top of the gh-pages branch WITHOUT touching the
+  # chart's index.yaml / *.tgz or the existing CNAME.
+  # -------------------------------------------------------------------------
+  publish-site:
+    name: Publish site to gh-pages
+    needs: [resolve, release-helm]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+          fetch-depth: 0
+      - name: Inject chart version into index.html
+        env:
+          CHART_VERSION: ${{ needs.resolve.outputs.chart_version }}
+        run: |
+          sed -i "s|@@CHART_VERSION@@|$CHART_VERSION|g" site/index.html
+          if grep -qE '@@CHART_VERSION@@' site/index.html; then
+            echo "::error::site/index.html still contains an unreplaced placeholder"
+            exit 1
+          fi
+      - name: Push site to gh-pages
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name  "github-actions[bot]"
+          git worktree add -B gh-pages /tmp/gh-pages-site origin/gh-pages
+          rsync -a --delete \
+                --exclude '.git' \
+                --exclude 'index.yaml' \
+                --exclude '*.tgz' \
+                --filter='P CNAME' \
+                site/ /tmp/gh-pages-site/
+          # Re-copy the ownership file that rsync --delete may have removed
+          # (it lives at the gh-pages root, outside site/).
+          cp -v artifacthub-repo.yaml /tmp/gh-pages-site/artifacthub-repo.yaml || true
+          cd /tmp/gh-pages-site
+          git add -Af .
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: publish site to gh-pages"
+            git push origin gh-pages
+          else
+            echo "No site changes to commit"
+          fi
+          git worktree remove --force /tmp/gh-pages-site
+
+  # -------------------------------------------------------------------------
+  # 5. Notify artifacthub.io (optional, best-effort)
   # -------------------------------------------------------------------------
   notify-artifacthub:
     name: Trigger Artifact Hub re-index (optional)
     runs-on: ubuntu-24.04
-    needs: release-helm
+    needs: publish-site
     if: success()
     continue-on-error: true
     permissions: {}

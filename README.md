@@ -107,7 +107,8 @@ and data-safety notes.
   tests, PocketBase integration tests, and `helm lint` + template render.
 - **CD** (`.github/workflows/release.yml`) — on a `v*` tag: runs CI, builds
   multi-arch (amd64/arm64) images to Docker Hub, packages the chart, attaches
-  it to the release, and updates the Helm repo `index.yaml` on `gh-pages`.
+  it to the release, updates the Helm repo `index.yaml` on `gh-pages`, and
+  publishes the minimal landing page (`site/`) to `https://secanis.github.io/ryni/`.
 
 ```bash
 # Local chart checks
