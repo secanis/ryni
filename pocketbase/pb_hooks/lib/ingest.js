@@ -10,7 +10,8 @@
 //     record, so adblock testers probing endpoints can't fingerprint a site.
 //   - Variant A (cross-origin): enforces the site's `allowed_origins` and
 //     echoes `Access-Control-Allow-Origin`. Variant B (same-origin proxy)
-//     sends no `Origin` header and is trusted (self-host).
+//     sends no `Origin` header and is gated on the browser's `Sec-Fetch-Site`
+//     signal so non-browser clients (curl/wget) can't poison the data.
 //   - Stores only the fields the client sends: a random visitor id, page,
 //     referrer, UA-derived browser/os/device, screen size, duration. No IP,
 //     no cookie.
@@ -132,9 +133,11 @@ function handler(e) {
         return;
     }
 
-    // Variant A: enforce allowed origins. Variant B (no Origin) passes.
+    // Variant A: cross-origin browser requests carry an `Origin` header —
+    // enforce the site's allowed_origins. Variant B (same-origin proxy)
+    // carries no `Origin`, so gate it on the browser's Sec-Fetch-Site signal.
     // CORS itself is handled by PB's default `Access-Control-Allow-Origin: *`;
-    // this 403 is the real security boundary (the response carries no data).
+    // these 403s are the real security boundary (the response carries no data).
     if (origin) {
         var allowed = [];
         try {
@@ -144,6 +147,23 @@ function handler(e) {
             allowed = JSON.parse(bytesToUtf8(raw) || '[]') || [];
         } catch (_) {}
         if (allowed.indexOf(origin) === -1) {
+            reply(e, 403, { ok: false });
+            return;
+        }
+    } else {
+        // Variant B: the browser posts to its own origin, which proxies here.
+        // A real browser beacon carries `Sec-Fetch-Site: same-origin` (or
+        // `same-site` for a subdomain proxy). curl/wget send neither — reject
+        // them so the anonymous ingest can't be trivially poisoned.
+        //
+        // This is a best-effort browser signal (a determined client can spoof
+        // the header), layered with the rate limiter — not a cryptographic
+        // boundary. For a hard boundary, put Rýni behind your own auth.
+        var fetchSite = '';
+        try {
+            fetchSite = str(e.request.header.get('Sec-Fetch-Site'), 100);
+        } catch (_) {}
+        if (fetchSite !== 'same-origin' && fetchSite !== 'same-site') {
             reply(e, 403, { ok: false });
             return;
         }

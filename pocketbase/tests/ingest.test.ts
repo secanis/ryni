@@ -29,9 +29,10 @@ async function countRecords(siteId: string): Promise<number> {
   return list.totalItems;
 }
 
-function post(slug: string, body: unknown, origin?: string) {
+function post(slug: string, body: unknown, origin?: string, fetchSite?: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin) headers.Origin = origin;
+  if (fetchSite) headers['Sec-Fetch-Site'] = fetchSite;
   return fetch(`${getPbUrl()}/t/${slug}`, {
     method: 'POST',
     headers,
@@ -42,7 +43,7 @@ function post(slug: string, body: unknown, origin?: string) {
 describe('ingest route', () => {
   it('creates a record on first view and marks new visitor', async () => {
     slug = await makeSite(['https://a.example']);
-    const res = await post(slug, { visitor: 'v1', page: '/home', browser: 'Chrome' });
+    const res = await post(slug, { visitor: 'v1', page: '/home', browser: 'Chrome' }, 'https://a.example');
     expect(res.status).toBe(200);
 
     const records = await admin.collection('records').getList(1, 10, {
@@ -53,7 +54,7 @@ describe('ingest route', () => {
     expect((records.items[0] as any).path).toBe('/home');
 
     // Second view from the same visitor → not new.
-    await post(slug, { visitor: 'v1', page: '/about' });
+    await post(slug, { visitor: 'v1', page: '/about' }, 'https://a.example');
     const after = await admin.collection('records').getList(1, 10, {
       filter: `visitor_id="v1"`,
     });
@@ -84,14 +85,25 @@ describe('ingest route', () => {
     expect(records.totalItems).toBe(1);
   });
 
-  it('allows Variant B (no Origin) and applies duration on "end"', async () => {
+  it('rejects Variant B with no browser signal (curl/wget bypass)', async () => {
     const s = await makeSite([]);
-    // A view with no Origin (same-origin proxy).
-    const v = await post(s, { visitor: 'vb1', page: '/page1' });
+    // No Origin AND no Sec-Fetch-Site → looks like a non-browser client.
+    const res = await post(s, { visitor: 'vb-curl', page: '/' });
+    expect(res.status).toBe(403);
+    const records = await admin.collection('records').getList(1, 10, {
+      filter: `visitor_id="vb-curl"`,
+    });
+    expect(records.totalItems).toBe(0);
+  });
+
+  it('allows Variant B (no Origin + Sec-Fetch-Site) and applies duration on "end"', async () => {
+    const s = await makeSite([]);
+    // A view with no Origin but a same-origin browser beacon.
+    const v = await post(s, { visitor: 'vb1', page: '/page1' }, undefined, 'same-origin');
     expect(v.status).toBe(200);
 
     // "end" carries the duration spent on /page1.
-    const e = await post(s, { visitor: 'vb1', type: 'end', duration: 42 });
+    const e = await post(s, { visitor: 'vb1', type: 'end', duration: 42 }, undefined, 'same-origin');
     expect(e.status).toBe(200);
 
     const records = await admin.collection('records').getList(1, 10, {

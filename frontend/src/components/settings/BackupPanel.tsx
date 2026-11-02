@@ -45,8 +45,29 @@ export default function BackupPanel() {
     await load();
   }
 
-  function downloadUrl(key: string): string {
-    return `${pb.baseUrl}/api/backups/${encodeURIComponent(key)}?token=${encodeURIComponent(pb.authStore.token)}`;
+  async function download(key: string) {
+    setError('');
+    try {
+      // Fetch the backup with the token in the Authorization header — never
+      // the query string, which would leak into logs/browser history/Referer.
+      const res = await fetch(`${pb.baseUrl}/api/backups/${encodeURIComponent(key)}`, {
+        headers: { Authorization: pb.authStore.token },
+      });
+      if (!res.ok) {
+        throw new Error(`Download failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = key;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Download failed');
+    }
   }
 
   function sizeLabel(bytes: number): string {
@@ -84,9 +105,9 @@ export default function BackupPanel() {
                   </div>
                 </div>
                 <div class="flex gap-3">
-                  <a href={downloadUrl(b.key)} class="text-sm underline">
+                  <button onClick={() => void download(b.key)} class="text-sm underline">
                     Download
-                  </a>
+                  </button>
                   <button onClick={() => void remove(b.key)} class="text-sm underline text-red-600">
                     Delete
                   </button>

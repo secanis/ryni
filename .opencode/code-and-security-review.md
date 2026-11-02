@@ -177,3 +177,22 @@ None.
 - **Privacy by design:** no cookies, no raw IP storage, DNT honored (`identity.ts:20-23`), coarse UA detection (`detect.ts`), `sendBeacon` with no CORS preflight.
 - **No XSS sinks:** zero `innerHTML`/`dangerouslySetInnerHTML`/`eval` in the frontend; SolidJS text escaping covers stored analytics strings.
 - **Migration safety:** idempotent field/index creation with `IF NOT EXISTS`; rollback handlers avoid data loss.
+
+---
+
+## Remediation Status (2026-11-02)
+
+| Finding | Status | How |
+|---------|--------|-----|
+| H-1 (no rate limiting) | ✅ Fixed | PB built-in rate limiter enabled via `pb_migrations/1740000003_enable_rate_limits.js` (auth 10/min, password reset 3/min, ingest `POST /t/` 300/min, create 60/min, API 2000/min; loopback excluded). Plus nginx `limit_req` on `/t/` as defense-in-depth (`nginx.conf` + Helm `frontend.rateLimit`). |
+| M-2 (superuser JWT in backup URL) | ✅ Fixed | `BackupPanel.tsx` downloads via `fetch` with `Authorization` header + `Blob`/`ObjectURL`; no token in the URL. |
+| M-3 (user email enumeration) | ✅ Fixed | `pb_hooks/lib/users.js` now requires superuser or a site manager, and uses exact match (`email = {:q} || name = {:q}`) instead of `~`. |
+| M-4 (CSP `'unsafe-eval'`/`'unsafe-inline'`) | ✅ Fixed | `script-src 'self'` only in `nginx.conf` + Helm configmap. Verified prod build emits no inline scripts. |
+| M-5 (`client_max_body_size 500m` on `/t/`) | ✅ Fixed | `client_max_body_size 64k` + `proxy_request_buffering on` in `location /t/` (both configs). |
+| M-1 (allowed-origins bypass via missing `Origin`) | ✅ Fixed | No-`Origin` (Variant B) requests now require `Sec-Fetch-Site: same-origin`/`same-site`, blocking curl/wget poisoning (layered with the ingest rate limit). Best-effort browser signal — a determined client can spoof the header. |
+| L-3 (duration field poisoning) | ⚠️ Open | Still unclamped; `duration` accepted as-is from the client. |
+| L-4 (stats loads all rows) | ⚠️ Open | `stats.js` still filters in JS after loading all records. |
+| L-5 (swallowed exceptions) | ⚠️ Open | Blanket `catch (_) {}` still discards failures. |
+| L-1/L-2/L-6/L-7 | ⚠️ Open | Documented, low priority; not changed. |
+
+**Verification performed:** `helm lint` ✅ · `helm template` render ✅ · `nginx -t` (both configs) ✅ · `frontend` lint/typecheck/build/unit tests ✅ · `pocketbase` vitest integration suite (29 tests, incl. migration apply + new `users` gate) ✅ · rate-limiter settings confirmed via `GET /api/settings`.

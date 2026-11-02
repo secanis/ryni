@@ -186,6 +186,28 @@ frontend:
       drop: [ALL]
     seccompProfile:
       type: RuntimeDefault
+  # -- nginx-level ingest rate limiting (defense-in-depth on top of
+  # -- PocketBase's built-in rate limiter, which is the authoritative one and
+  # -- is enabled by a migration). Auth brute-force is handled by PB, which
+  # -- resolves the real client IP via its trustedProxy setting. nginx sits
+  # -- behind the ingress, so to key on the real client IP it must trust the
+  # -- ingress as a proxy: set `realIpFrom` to the ingress controller's pod
+  # -- CIDR(s) (defaults to the RFC1918 ranges). Set `enabled` false to rely
+  # -- on PocketBase alone.
+  rateLimit:
+    enabled: true
+    # -- Trusted proxy CIDRs for the nginx `real_ip` module (the ingress
+    # -- controller pods). Restrict to the cluster's pod CIDR for correctness.
+    realIpFrom:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    # -- Header the ingress uses to carry the client IP.
+    realIpHeader: X-Forwarded-For
+    # -- Ingest rate (per client IP): requests per minute.
+    ingestRate: 240r/m
+    # -- Burst allowance for the ingest zone before requests are rejected.
+    ingestBurst: 500
 
 # -- NetworkPolicies (require a CNI that enforces them, e.g. Calico, Cilium;
 # without one they are inert). When enabled, PocketBase only accepts traffic

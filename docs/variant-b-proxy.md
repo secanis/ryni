@@ -52,3 +52,10 @@ export default {
 
 Note there is no `data-ryni-server` — the tracker defaults to the same
 origin, so it posts to `/t/<tracking_id>` on your own domain.
+
+> The ingest accepts Variant B requests only when they carry a browser
+> `Sec-Fetch-Site: same-origin` (or `same-site`) header. Real browser beacons
+> always send it; the proxy forwards it unchanged. A bare `curl`/`wget` to the
+> endpoint (no such header) returns 403 — that's expected, not a misconfig.
+> For a hard, unspoofable boundary, put Rýni behind your own auth or a
+> shared-secret proxy token.
