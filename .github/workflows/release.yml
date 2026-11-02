@@ -359,7 +359,7 @@ jobs:
     steps:
       - name: Ping Artifact Hub
         run: |
-          REPO="https://secanis.github.io/ryni/"
+          REPO="https://ryni.secanis.ch/"
           echo "Notifying Artifact Hub to re-index $REPO"
           curl -fsS -X POST \
             -H "Content-Type: application/json" \
