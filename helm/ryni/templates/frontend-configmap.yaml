@@ -16,6 +16,20 @@ data:
         ''      close;
     }
 
+        # Edge ingest rate limiting (defense-in-depth on top of PocketBase's
+        # built-in limiter, which is the authoritative one). nginx sits behind
+        # the ingress, so resolve the real client IP from the trusted proxy
+        # before keying the limit — otherwise every client would share the
+        # ingress pod's IP and one bucket.
+{{- if .Values.frontend.rateLimit.enabled }}
+{{- range .Values.frontend.rateLimit.realIpFrom }}
+        set_real_ip_from {{ . }};
+{{- end }}
+        real_ip_header {{ .Values.frontend.rateLimit.realIpHeader | default "X-Forwarded-For" }};
+        real_ip_recursive on;
+        limit_req_zone $binary_remote_addr zone=ryni_ingest:10m rate={{ .Values.frontend.rateLimit.ingestRate | default "240r/m" }};
+{{- end }}
+
     server {
         listen {{ .Values.frontend.service.port }};
         server_name _;
@@ -31,7 +45,7 @@ data:
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'" always;
 
         # Never cache the SPA entrypoint; always cache hashed assets.
         location = /index.html {
@@ -80,7 +94,14 @@ data:
         }
 
         # Anonymous tracking ingest (Variant A: POST /t/{slug}).
+        # The ingest only ever reads a 64 KB body — cap it here so the
+        # anonymous endpoint can't be used to stream huge request bodies (DoS).
         location /t/ {
+            client_max_body_size 64k;
+            proxy_request_buffering on;
+{{- if .Values.frontend.rateLimit.enabled }}
+            limit_req zone=ryni_ingest burst={{ .Values.frontend.rateLimit.ingestBurst | default 500 }} nodelay;
+{{- end }}
             proxy_pass http://{{ $pbHost }}:{{ .Values.pocketbase.service.port }};
             proxy_http_version 1.1;
             proxy_set_header Host $host;
