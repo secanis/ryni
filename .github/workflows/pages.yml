@@ -1,0 +1,117 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# GitHub Pages deployment for RÝNI.
+#
+# Deploys the landing page (site/) AND the Helm chart repository (index.yaml +
+# chart *.tgz) to the same Pages site, using the official Actions deployment
+# (configure-pages / upload-pages-artifact / deploy-pages). GitHub Pages is
+# configured with "GitHub Actions" as the source (custom domain
+# ryni.secanis.ch).
+#
+# The Helm repo files live on the `gh-pages` branch (written by `release-helm`
+# in release.yml on each release). This workflow re-assembles them together
+# with the freshly-built landing page into one deploy artifact, so
+# `helm repo add https://ryni.secanis.ch/` keeps working from the same site.
+#
+# Triggers:
+#   - push to main (site/ or this workflow changes)
+#   - workflow_dispatch (manual)
+#   - workflow_call (from release.yml after the Helm index has been updated)
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to deploy (empty = the triggering ref)'
+        type: string
+        default: ''
+
+# A new deployment cancels an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy site to GitHub Pages
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Determine chart version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The install snippet pins `--version`. Use the latest release tag
+          # (e.g. v0.1.0); fall back to the committed Chart.yaml version when
+          # no release exists yet.
+          TAG="$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)"
+          if [ -n "$TAG" ]; then
+            CHART_VERSION="${TAG#v}"
+          else
+            CHART_VERSION="$(grep '^version:' helm/ryni/Chart.yaml | awk '{print $2}')"
+          fi
+          echo "chart_version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved chart version: $CHART_VERSION"
+
+      - name: Assemble site + Helm repo
+        env:
+          CHART_VERSION: ${{ steps.version.outputs.chart_version }}
+        run: |
+          mkdir -p _site
+
+          # Landing page (chart version injected into the install snippet).
+          sed "s|@@CHART_VERSION@@|$CHART_VERSION|g" site/index.html > _site/index.html
+          cp -a site/CNAME _site/CNAME 2>/dev/null || true
+          if grep -q '@@CHART_VERSION@@' _site/index.html; then
+            echo "::error::site/index.html still contains an unreplaced placeholder"
+            exit 1
+          fi
+
+          # Helm repository files from the gh-pages branch (index.yaml, *.tgz,
+          # artifacthub-repo.yaml) — preserved across landing-page redeploys.
+          # (checkout uses fetch-depth: 0, so origin/gh-pages is usually
+          # already present; this fetch is a no-op safety net.)
+          git fetch origin gh-pages 2>/dev/null || true
+          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
+            git worktree add --detach /tmp/gh-pages-src origin/gh-pages
+            cp -a /tmp/gh-pages-src/index.yaml _site/ 2>/dev/null || true
+            find /tmp/gh-pages-src -maxdepth 1 -name '*.tgz' -exec cp -a {} _site/ \; 2>/dev/null || true
+            cp -a /tmp/gh-pages-src/artifacthub-repo.yaml _site/ 2>/dev/null || true
+            git worktree remove --force /tmp/gh-pages-src
+          fi
+
+          # Artifact Hub ownership metadata (repo root), if the branch didn't
+          # already carry it.
+          cp -a artifacthub-repo.yaml _site/ 2>/dev/null || true
+
+          echo "--- deploy artifact ---"
+          ls -la _site
+
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
