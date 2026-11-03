@@ -288,8 +288,11 @@ jobs:
           # Artifact Hub reads artifacthub-repo.yaml from the helm repo root.
           cp -v artifacthub-repo.yaml /tmp/gh-pages-index/artifacthub-repo.yaml || true
           cd /tmp/gh-pages-index
-          if ! git diff --quiet index.yaml; then
-            git add index.yaml
+          # Stage first: a freshly-generated index.yaml is untracked, and
+          # `git diff` ignores untracked files — diffing before staging would
+          # skip the first publish entirely.
+          git add index.yaml artifacthub-repo.yaml 2>/dev/null || true
+          if ! git diff --cached --quiet; then
             git commit -m "ci: publish chart $CHART_VERSION (release $TAG)"
             git push origin gh-pages
           else
