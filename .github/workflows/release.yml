@@ -180,6 +180,29 @@ jobs:
           readme-filepath: ${{ matrix.readme }}
           short-description: ${{ matrix.short_description }}
 
+      # Docker Hub auto-creates repos as PRIVATE on first push, which breaks
+      # anonymous pulls (and Artifact Hub scanning). Flip it public.
+      # Best-effort: the PAT must have Admin scope on the namespace.
+      - name: Make Docker Hub repo public
+        if: success()
+        continue-on-error: true
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          REPO: ${{ matrix.repo }}
+        run: |
+          JWT="$(curl -fsS https://hub.docker.com/v2/auth/token \
+            -H 'Content-Type: application/json' \
+            -d "{\"identifier\":\"${DOCKERHUB_USERNAME}\",\"secret\":\"${DOCKERHUB_TOKEN}\"}" \
+            | jq -r '.access_token')"
+          echo "JWT acquired (${#JWT} chars)"
+          RESP="$(curl -sS -w '\n%{http_code}' -X PATCH \
+            "https://hub.docker.com/v2/repositories/${REPO}/" \
+            -H "Authorization: Bearer ${JWT}" \
+            -H 'Content-Type: application/json' \
+            -d '{"is_private": false}')"
+          echo "PATCH ${REPO} -> ${RESP}"
+
   # -------------------------------------------------------------------------
   # 2. Bootstrap the gh-pages branch (orphan + empty commit) so the
   # index.yaml push step has somewhere to push on a fresh repo.
