@@ -306,10 +306,11 @@ python3 -c 'import json,sys; print(json.dumps({"visitor":"smoke-visitor","type":
 log "ingesting a view via the frontend /t/ proxy ..."
 INGEST_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
   -X POST -H 'Content-Type: application/json' \
+  -H 'Sec-Fetch-Site: same-origin' \
   --data-binary "@$INGEST_BODY" \
   "http://localhost:$FE_PORT/t/$SLUG" || echo "000")
-[[ "$INGEST_STATUS" == "200" ]] || fail "ingest via FE /t/ returned HTTP $INGEST_STATUS"
-ok "ingest via FE /t/ → HTTP 200"
+[[ "$INGEST_STATUS" == "204" ]] || fail "ingest via FE /t/ returned HTTP $INGEST_STATUS"
+ok "ingest via FE /t/ → HTTP 204"
 
 log "reading stats back via the frontend /api/ proxy ..."
 STATS=$(curl -fsS --max-time 10 \

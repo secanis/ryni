@@ -23,6 +23,17 @@ function reply(e, status, obj) {
     e.string(status, body);
 }
 
+// Fire-and-forget success. The tracker posts via navigator.sendBeacon()
+// (a no-cors cross-origin request) and never reads the response, so we
+// return an empty 204 instead of a JSON body. A JSON response to a no-cors
+// request is "blockable" under Chrome's Opaque Response Blocking (ORB) and
+// would surface as ERR_BLOCKED_BY_ORB on the client site. No body → nothing
+// for ORB to block.
+function noContent(e) {
+    e.response.header().set('Cache-Control', 'no-store');
+    e.noContent(204);
+}
+
 function readJsonBody(e) {
     try {
         return JSON.parse(readerToString(e.request.body, 64 * 1024) || '{}') || {};
@@ -180,14 +191,14 @@ function handler(e) {
 
     if (type === 'heartbeat') {
         upsertHeartbeat(siteId, visitor);
-        reply(e, 200, { ok: true });
+        noContent(e);
         return;
     }
 
     if (type === 'end') {
         applyDuration(siteId, visitor, Number(body.duration) || 0);
         removeHeartbeat(siteId, visitor);
-        reply(e, 200, { ok: true });
+        noContent(e);
         return;
     }
 
@@ -212,7 +223,7 @@ function handler(e) {
     $app.save(rec);
 
     upsertHeartbeat(siteId, visitor);
-    reply(e, 200, { ok: true });
+    noContent(e);
 }
 
 module.exports = { handler: handler };

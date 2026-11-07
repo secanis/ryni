@@ -44,7 +44,9 @@ describe('ingest route', () => {
   it('creates a record on first view and marks new visitor', async () => {
     slug = await makeSite(['https://a.example']);
     const res = await post(slug, { visitor: 'v1', page: '/home', browser: 'Chrome' }, 'https://a.example');
-    expect(res.status).toBe(200);
+    // Fire-and-forget beacon → empty 204 (no JSON body, so ORB won't block it).
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
 
     const records = await admin.collection('records').getList(1, 10, {
       filter: `visitor_id="v1"`,
@@ -76,9 +78,9 @@ describe('ingest route', () => {
     const bad = await post(s, { visitor: 'v-bad', page: '/' }, 'https://evil.example');
     expect(bad.status).toBe(403);
 
-    // Allowed origin → 200, record created.
+    // Allowed origin → 204, record created.
     const good = await post(s, { visitor: 'v-good', page: '/' }, 'https://allowed.example');
-    expect(good.status).toBe(200);
+    expect(good.status).toBe(204);
     const records = await admin.collection('records').getList(1, 10, {
       filter: `visitor_id="v-good"`,
     });
@@ -100,11 +102,11 @@ describe('ingest route', () => {
     const s = await makeSite([]);
     // A view with no Origin but a same-origin browser beacon.
     const v = await post(s, { visitor: 'vb1', page: '/page1' }, undefined, 'same-origin');
-    expect(v.status).toBe(200);
+    expect(v.status).toBe(204);
 
     // "end" carries the duration spent on /page1.
     const e = await post(s, { visitor: 'vb1', type: 'end', duration: 42 }, undefined, 'same-origin');
-    expect(e.status).toBe(200);
+    expect(e.status).toBe(204);
 
     const records = await admin.collection('records').getList(1, 10, {
       filter: `visitor_id="vb1"`,
