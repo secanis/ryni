@@ -121,7 +121,7 @@ export default function Dashboard() {
           <TimeSeries points={s()!.series} />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <Breakdown title="Referrers" items={s()!.referrers} />
           <Breakdown title="Browsers" items={s()!.browsers} />
           <Breakdown title="Operating systems" items={s()!.os} />
