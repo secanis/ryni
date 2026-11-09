@@ -111,8 +111,13 @@ export default function Dashboard() {
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard label="Views" value={String(s()!.views)} />
           <StatCard label="Unique visitors" value={String(s()!.uniqueVisitors)} />
+          <StatCard label="New visitors" value={String(s()!.newVisitors)} />
+          <StatCard label="Returning visitors" value={String(s()!.returningVisitors)} />
+          <StatCard label="Sessions" value={String(s()!.sessions)} />
           <StatCard label="Avg duration" value={`${s()!.avgDuration}s`} />
+          <StatCard label="Avg session duration" value={`${s()!.avgSessionDuration}s`} />
           <StatCard label="Bounce rate" value={`${Math.round(s()!.bounceRate * 100)}%`} />
+          <StatCard label="Pages / session" value={String(s()!.pagesPerSession)} />
           <StatCard label="Current" value={String(s()!.currentVisitors)} />
         </div>
 
@@ -123,11 +128,16 @@ export default function Dashboard() {
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <Breakdown title="Referrers" items={s()!.referrers} />
+          <Breakdown title="Landing pages" items={s()!.landingPages} />
+          <Breakdown title="Exit pages" items={s()!.exitPages} />
+          <Breakdown title="Pages" items={s()!.pages} />
           <Breakdown title="Browsers" items={s()!.browsers} />
           <Breakdown title="Operating systems" items={s()!.os} />
           <Breakdown title="Devices" items={s()!.devices} />
           <Breakdown title="Screen sizes" items={s()!.screens} />
-          <Breakdown title="Pages" items={s()!.pages} />
+          <Breakdown title="Hour of day" items={s()!.hours} />
+          <Breakdown title="Day of week" items={s()!.daysOfWeek} />
+          <Breakdown title="Duration" items={s()!.durations} />
         </div>
       </Show>
     </div>

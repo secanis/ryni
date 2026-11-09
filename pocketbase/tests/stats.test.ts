@@ -60,9 +60,24 @@ describe('stats route', () => {
       uniqueVisitors: 3,
       newVisitors: 3,
       avgDuration: 8, // (10 + 5) / 2 = 7.5 → round 8
+      sessions: 4,
+      returningVisitors: 0,
+      pagesPerSession: 1.5,
+      avgSessionDuration: 150, // v1 session 10:00→10:10 = 600s; others 0
     });
     expect(res.bounceRate).toBeCloseTo(0.75); // 3 bounces / 4 sessions
     expect(res.series.length).toBeGreaterThan(0);
+    expect(res.landingPages).toContainEqual({ value: '/a', count: 1 });
+    expect(res.exitPages).toContainEqual({ value: '/c', count: 1 });
+  });
+
+  it('breaks down hour of day, day of week and duration', async () => {
+    const res = await stats('a');
+    // 5 records at 10:00-ish, 1 at 11:00 (all 2026-11-01).
+    expect(res.hours).toContainEqual({ value: '10h', count: 5 });
+    expect(res.daysOfWeek[0].count).toBe(6);
+    // durations 10 and 5 both fall in the 0-10s bucket.
+    expect(res.durations).toContainEqual({ value: '0-10s', count: 2 });
   });
 
   it('counts current visitors from recent heartbeats', async () => {
