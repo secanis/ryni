@@ -219,6 +219,12 @@ function handler(e) {
     rec.set('os', str(body.os, 100));
     rec.set('device', str(body.device, 100));
     rec.set('screen_size', str(body.screen, 50));
+    rec.set('language', str(body.language, 100));
+    rec.set('timezone', str(body.timezone, 100));
+    rec.set('title', str(body.title, 500));
+    rec.set('utm_source', str(body.utm_source, 200));
+    rec.set('utm_medium', str(body.utm_medium, 200));
+    rec.set('utm_campaign', str(body.utm_campaign, 200));
     rec.set('is_new_visitor', isNewVisitor(siteId, visitor));
     $app.save(rec);
 

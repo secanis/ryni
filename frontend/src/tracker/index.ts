@@ -15,7 +15,7 @@
 import { getVisitorId, shouldTrack } from './identity';
 import { detectClient } from './detect';
 import { buildPayload, endpointUrl } from './track';
-import type { TrackerConfig } from './types';
+import type { TrackerConfig, UtmParams } from './types';
 
 function readConfig(): TrackerConfig {
   const el = document.currentScript as HTMLScriptElement | null;
@@ -30,6 +30,25 @@ function currentPath(): string {
   return location.pathname + location.search;
 }
 
+// Pull the standard UTM campaign params from the URL query (skipped entirely
+// when none are present, so we don't store a bundle of empty strings).
+function utmParams(): UtmParams | undefined {
+  try {
+    const q = new URLSearchParams(location.search);
+    const source = q.get('utm_source');
+    const medium = q.get('utm_medium');
+    const campaign = q.get('utm_campaign');
+    if (!source && !medium && !campaign) return undefined;
+    return {
+      source: source || undefined,
+      medium: medium || undefined,
+      campaign: campaign || undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 const cfg = readConfig();
 const visitor = cfg.site ? getVisitorId(window.localStorage, cfg.site) : '';
 
@@ -42,8 +61,10 @@ function send(type: 'view' | 'end' | 'heartbeat', duration?: number): void {
     visitor,
     type,
     page: type === 'view' ? currentPath() : undefined,
+    title: type === 'view' ? document.title : undefined,
     referrer: type === 'view' ? document.referrer : undefined,
     client: type === 'view' ? detectClient(navigator, window.screen) : undefined,
+    utm: type === 'view' ? utmParams() : undefined,
     duration,
   });
   try {

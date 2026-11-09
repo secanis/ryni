@@ -5,7 +5,7 @@
 import type { ClientInfo } from './types';
 
 export function detectClient(
-  nav: { userAgent?: string; maxTouchPoints?: number },
+  nav: { userAgent?: string; maxTouchPoints?: number; language?: string },
   screen?: { width: number; height: number },
 ): ClientInfo {
   const ua = nav.userAgent || '';
@@ -15,7 +15,17 @@ export function detectClient(
     os: detectOs(ua),
     device: detectDevice(ua, touch),
     screen: screen ? `${screen.width}x${screen.height}` : '',
+    language: nav.language || '',
+    timezone: detectTimezone(),
   };
+}
+
+function detectTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  } catch {
+    return '';
+  }
 }
 
 export function detectBrowser(ua: string): string {

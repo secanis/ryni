@@ -128,13 +128,19 @@ export default function Dashboard() {
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <Breakdown title="Referrers" items={s()!.referrers} />
+          <Breakdown title="UTM source" items={s()!.utmSources} />
+          <Breakdown title="UTM medium" items={s()!.utmMediums} />
+          <Breakdown title="UTM campaign" items={s()!.utmCampaigns} />
           <Breakdown title="Landing pages" items={s()!.landingPages} />
           <Breakdown title="Exit pages" items={s()!.exitPages} />
           <Breakdown title="Pages" items={s()!.pages} />
+          <Breakdown title="Page titles" items={s()!.titles} />
           <Breakdown title="Browsers" items={s()!.browsers} />
           <Breakdown title="Operating systems" items={s()!.os} />
           <Breakdown title="Devices" items={s()!.devices} />
           <Breakdown title="Screen sizes" items={s()!.screens} />
+          <Breakdown title="Languages" items={s()!.languages} />
+          <Breakdown title="Timezones" items={s()!.timezones} />
           <Breakdown title="Hour of day" items={s()!.hours} />
           <Breakdown title="Day of week" items={s()!.daysOfWeek} />
           <Breakdown title="Duration" items={s()!.durations} />

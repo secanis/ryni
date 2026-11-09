@@ -47,6 +47,12 @@ export interface SiteStats {
   durations: Breakdown[];
   landingPages: Breakdown[];
   exitPages: Breakdown[];
+  languages: Breakdown[];
+  timezones: Breakdown[];
+  titles: Breakdown[];
+  utmSources: Breakdown[];
+  utmMediums: Breakdown[];
+  utmCampaigns: Breakdown[];
 }
 
 export interface Snippets {
