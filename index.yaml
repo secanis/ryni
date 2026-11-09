@@ -5,6 +5,29 @@ entries:
       category: Analytics
       licenses: AGPL-3.0-or-later
     apiVersion: v2
+    appVersion: v0.0.1-rc2
+    created: "2026-11-09T00:09:58.352349911Z"
+    description: RÝNI — privacy-preserving web analytics (PocketBase + SolidJS frontend)
+    digest: 9005bec17603cec253eb8893a048c112e49f8bafc81ed388a58c845668514af4
+    home: https://github.com/secanis/ryni
+    keywords:
+    - pocketbase
+    - analytics
+    - privacy
+    - self-hosted
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: support@secanis.ch
+      name: secanis
+    name: ryni
+    type: application
+    urls:
+    - https://github.com/secanis/ryni/releases/download/v0.0.1-rc2/ryni-0.0.1-rc2.tgz
+    version: 0.0.1-rc2
+  - annotations:
+      category: Analytics
+      licenses: AGPL-3.0-or-later
+    apiVersion: v2
     appVersion: v0.0.1-rc1
     created: "2026-11-04T00:22:10.960176154+01:00"
     description: RÝNI — privacy-preserving web analytics (PocketBase + SolidJS frontend)
@@ -24,4 +47,4 @@ entries:
     urls:
     - https://github.com/secanis/ryni/releases/download/v0.0.1-rc1/ryni-0.0.1-rc1.tgz
     version: 0.0.1-rc1
-generated: "2026-11-04T00:22:10.959218658+01:00"
+generated: "2026-11-09T00:09:58.351187782Z"
