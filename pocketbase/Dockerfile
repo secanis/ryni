@@ -1,7 +1,7 @@
 # Stage 1: download + verify the PocketBase binary.
-FROM docker.io/alpine:3.22 AS download
+FROM docker.io/alpine:3.24 AS download
 
-ARG PB_VERSION=0.40.4
+ARG PB_VERSION=0.40.6
 ARG TARGETARCH=amd64
 ARG TARGETVARIANT=
 
@@ -28,7 +28,7 @@ RUN set -eu; \
     chmod 0755 pocketbase
 
 # Stage 2: runtime image.
-FROM docker.io/alpine:3.22
+FROM docker.io/alpine:3.24
 
 RUN apk add --no-cache ca-certificates \
     && adduser -D -u 1000 -s /bin/sh pocketbase
