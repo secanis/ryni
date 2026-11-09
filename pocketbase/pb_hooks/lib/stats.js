@@ -16,6 +16,9 @@ var toMs = http.toMs;
 var SESSION_GAP_MS = 30 * 60 * 1000; // 30 min idle → new session
 var LIVE_WINDOW_MS = 5 * 60 * 1000; // current visitors window (default 5 min)
 
+var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var DURATION_BUCKETS = ['0-10s', '10-30s', '30-60s', '1-3m', '3-10m', '10m+'];
+
 function fail(e, status, message) {
     http.replyError(e, status, message);
 }
@@ -26,6 +29,15 @@ function str(r, k) {
 
 function dayKey(ms) {
     return new Date(ms).toISOString().slice(0, 10);
+}
+
+function durationBucket(seconds) {
+    if (seconds <= 10) return '0-10s';
+    if (seconds <= 30) return '10-30s';
+    if (seconds <= 60) return '30-60s';
+    if (seconds <= 180) return '1-3m';
+    if (seconds <= 600) return '3-10m';
+    return '10m+';
 }
 
 function statsHandler(e) {
@@ -73,7 +85,7 @@ function statsHandler(e) {
     var newVisitors = 0;
     var durSum = 0;
     var durCount = 0;
-    var byVisitor = {};
+    var byVisitor = {}; // vid -> [{ ts, path }]
     var byDay = {};
     var referrers = {};
     var browsers = {};
@@ -81,6 +93,9 @@ function statsHandler(e) {
     var devices = {};
     var screens = {};
     var pages = {};
+    var hours = {};
+    var daysOfWeek = {};
+    var durations = {};
 
     for (var j = 0; j < inRange.length; j++) {
         var r = inRange[j];
@@ -96,9 +111,10 @@ function statsHandler(e) {
         if (d > 0) {
             durSum += d;
             durCount++;
+            durations[durationBucket(d)] = (durations[durationBucket(d)] || 0) + 1;
         }
 
-        (byVisitor[vid] || (byVisitor[vid] = [])).push(ts2);
+        (byVisitor[vid] || (byVisitor[vid] = [])).push({ ts: ts2, path: str(r, 'path') });
 
         var day = dayKey(ts2);
         if (!byDay[day]) byDay[day] = { views: 0, uniqueVisitors: 0, seen: {} };
@@ -114,28 +130,46 @@ function statsHandler(e) {
         tally(devices, str(r, 'device'));
         tally(screens, str(r, 'screen_size'));
         tally(pages, str(r, 'path'));
+
+        hours[new Date(ts2).getUTCHours() + 'h'] = (hours[new Date(ts2).getUTCHours() + 'h'] || 0) + 1;
+        daysOfWeek[WEEKDAYS[new Date(ts2).getUTCDay()]] = (daysOfWeek[WEEKDAYS[new Date(ts2).getUTCDay()]] || 0) + 1;
     }
 
     var uniqueVisitors = Object.keys(visitorSet).length;
+    var returningVisitors = Math.max(0, uniqueVisitors - newVisitors);
     var avgDuration = durCount > 0 ? Math.round(durSum / durCount) : 0;
 
-    // --- sessions / bounce -------------------------------------------------
+    // --- sessions / bounce / landing / exit -------------------------------
     var sessions = 0;
     var bounces = 0;
+    var sessionDurSum = 0; // ms across sessions (last page-view ts − first)
+    var landings = {};
+    var exits = {};
+
     for (var vk in byVisitor) {
         if (!Object.prototype.hasOwnProperty.call(byVisitor, vk)) continue;
         var arr = byVisitor[vk];
         arr.sort(function (a, b) {
-            return a - b;
+            return a.ts - b.ts;
         });
         var sv = 0;
         var prev = -1;
+        var first = 0;
+        var firstPath = '';
         for (var si = 0; si < arr.length; si++) {
-            var t = arr[si];
+            var rec = arr[si];
+            var t = rec.ts;
             if (prev >= 0 && t - prev > SESSION_GAP_MS) {
                 if (sv === 1) bounces++;
                 sessions++;
+                sessionDurSum += prev - first;
+                tally(landings, firstPath);
+                tally(exits, arr[si - 1].path);
                 sv = 0;
+            }
+            if (sv === 0) {
+                first = t;
+                firstPath = rec.path;
             }
             sv++;
             prev = t;
@@ -143,9 +177,14 @@ function statsHandler(e) {
         if (sv > 0) {
             if (sv === 1) bounces++;
             sessions++;
+            sessionDurSum += prev - first;
+            tally(landings, firstPath);
+            tally(exits, arr[arr.length - 1].path);
         }
     }
     var bounceRate = sessions > 0 ? bounces / sessions : 0;
+    var pagesPerSession = sessions > 0 ? Math.round((views / sessions) * 10) / 10 : 0;
+    var avgSessionDuration = sessions > 0 ? Math.round(sessionDurSum / sessions / 1000) : 0;
 
     // --- series (per day) --------------------------------------------------
     var days = Object.keys(byDay);
@@ -157,6 +196,12 @@ function statsHandler(e) {
             uniqueVisitors: byDay[dkey].uniqueVisitors,
         };
     });
+
+    // --- duration histogram (fixed chronological order) --------------------
+    var durationList = [];
+    for (var di = 0; di < DURATION_BUCKETS.length; di++) {
+        durationList.push({ value: DURATION_BUCKETS[di], count: durations[DURATION_BUCKETS[di]] || 0 });
+    }
 
     // --- current visitors (live) ------------------------------------------
     var cutoff = Date.now() - LIVE_WINDOW_MS;
@@ -176,7 +221,11 @@ function statsHandler(e) {
         views: views,
         uniqueVisitors: uniqueVisitors,
         newVisitors: newVisitors,
+        returningVisitors: returningVisitors,
+        sessions: sessions,
+        pagesPerSession: pagesPerSession,
         avgDuration: avgDuration,
+        avgSessionDuration: avgSessionDuration,
         bounceRate: bounceRate,
         currentVisitors: currentVisitors,
         series: series,
@@ -186,6 +235,11 @@ function statsHandler(e) {
         devices: topN(devices),
         screens: topN(screens),
         pages: topN(pages),
+        hours: topN(hours, 24),
+        daysOfWeek: topN(daysOfWeek, 7),
+        durations: durationList,
+        landingPages: topN(landings),
+        exitPages: topN(exits),
     });
 }
 
@@ -195,13 +249,14 @@ function tally(map, value) {
     map[value] = (map[value] || 0) + 1;
 }
 
-function topN(map) {
+function topN(map, cap) {
+    cap = cap || 10;
     var keys = Object.keys(map);
     keys.sort(function (a, b) {
         return map[b] - map[a];
     });
     var out = [];
-    for (var i = 0; i < keys.length && i < 10; i++) {
+    for (var i = 0; i < keys.length && i < cap; i++) {
         out.push({ value: keys[i], count: map[keys[i]] });
     }
     return out;

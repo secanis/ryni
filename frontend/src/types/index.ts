@@ -28,7 +28,11 @@ export interface SiteStats {
   views: number;
   uniqueVisitors: number;
   newVisitors: number;
+  returningVisitors: number;
+  sessions: number;
+  pagesPerSession: number;
   avgDuration: number;
+  avgSessionDuration: number;
   bounceRate: number;
   currentVisitors: number;
   series: SeriesPoint[];
@@ -38,6 +42,11 @@ export interface SiteStats {
   devices: Breakdown[];
   screens: Breakdown[];
   pages: Breakdown[];
+  hours: Breakdown[];
+  daysOfWeek: Breakdown[];
+  durations: Breakdown[];
+  landingPages: Breakdown[];
+  exitPages: Breakdown[];
 }
 
 export interface Snippets {
