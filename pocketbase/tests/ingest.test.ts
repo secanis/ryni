@@ -63,6 +63,36 @@ describe('ingest route', () => {
     expect(after.totalItems).toBe(2);
   });
 
+  it('stores language, timezone, title and utm params', async () => {
+    const s = await makeSite(['https://meta.example']);
+    const res = await post(
+      s,
+      {
+        visitor: 'v-meta',
+        page: '/landing',
+        title: 'Landing Page',
+        language: 'de-CH',
+        timezone: 'Europe/Zurich',
+        utm_source: 'newsletter',
+        utm_medium: 'email',
+        utm_campaign: 'spring',
+      },
+      'https://meta.example',
+    );
+    expect(res.status).toBe(204);
+    const records = await admin.collection('records').getList(1, 10, {
+      filter: `visitor_id="v-meta"`,
+    });
+    expect(records.totalItems).toBe(1);
+    const rec = records.items[0] as any;
+    expect(rec.language).toBe('de-CH');
+    expect(rec.timezone).toBe('Europe/Zurich');
+    expect(rec.title).toBe('Landing Page');
+    expect(rec.utm_source).toBe('newsletter');
+    expect(rec.utm_medium).toBe('email');
+    expect(rec.utm_campaign).toBe('spring');
+  });
+
   it('404s on unknown slug and creates no record', async () => {
     const before = await admin.collection('records').getList(1, 1);
     const totalBefore = before.totalItems;

@@ -96,6 +96,19 @@ describe('stats route', () => {
     expect(res.currentVisitors).toBe(1);
   });
 
+  it('breaks down language, timezone, title and utm', async () => {
+    await seedRecord({ visitor_id: 'm1', language: 'de', timezone: 'Europe/Zurich', title: 'Home', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'summer', created: '2026-11-01T12:00:00.000Z' });
+    await seedRecord({ visitor_id: 'm2', language: 'de', timezone: 'Europe/Zurich', title: 'About', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'summer', created: '2026-11-01T12:01:00.000Z' });
+
+    const res = await stats('a');
+    expect(res.languages).toContainEqual({ value: 'de', count: 2 });
+    expect(res.timezones).toContainEqual({ value: 'Europe/Zurich', count: 2 });
+    expect(res.titles).toContainEqual({ value: 'Home', count: 1 });
+    expect(res.utmSources).toContainEqual({ value: 'google', count: 2 });
+    expect(res.utmMediums).toContainEqual({ value: 'cpc', count: 2 });
+    expect(res.utmCampaigns).toContainEqual({ value: 'summer', count: 2 });
+  });
+
   it('breaks down referrers and pages', async () => {
     await seedRecord({ visitor_id: 'r1', referrer: 'https://google.com', path: '/from-google', created: '2026-11-01T09:00:00.000Z' });
     await seedRecord({ visitor_id: 'r2', referrer: 'https://google.com', path: '/from-google-2', created: '2026-11-01T09:01:00.000Z' });

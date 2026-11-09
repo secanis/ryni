@@ -96,6 +96,12 @@ function statsHandler(e) {
     var hours = {};
     var daysOfWeek = {};
     var durations = {};
+    var languages = {};
+    var timezones = {};
+    var titles = {};
+    var utmSources = {};
+    var utmMediums = {};
+    var utmCampaigns = {};
 
     for (var j = 0; j < inRange.length; j++) {
         var r = inRange[j];
@@ -130,6 +136,12 @@ function statsHandler(e) {
         tally(devices, str(r, 'device'));
         tally(screens, str(r, 'screen_size'));
         tally(pages, str(r, 'path'));
+        tally(languages, str(r, 'language'));
+        tally(timezones, str(r, 'timezone'));
+        tally(titles, str(r, 'title'));
+        tally(utmSources, str(r, 'utm_source'));
+        tally(utmMediums, str(r, 'utm_medium'));
+        tally(utmCampaigns, str(r, 'utm_campaign'));
 
         hours[new Date(ts2).getUTCHours() + 'h'] = (hours[new Date(ts2).getUTCHours() + 'h'] || 0) + 1;
         daysOfWeek[WEEKDAYS[new Date(ts2).getUTCDay()]] = (daysOfWeek[WEEKDAYS[new Date(ts2).getUTCDay()]] || 0) + 1;
@@ -240,6 +252,12 @@ function statsHandler(e) {
         durations: durationList,
         landingPages: topN(landings),
         exitPages: topN(exits),
+        languages: topN(languages),
+        timezones: topN(timezones),
+        titles: topN(titles),
+        utmSources: topN(utmSources),
+        utmMediums: topN(utmMediums),
+        utmCampaigns: topN(utmCampaigns),
     });
 }
 

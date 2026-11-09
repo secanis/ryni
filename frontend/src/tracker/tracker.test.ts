@@ -34,11 +34,13 @@ describe('detect', () => {
   it('detects browser/os/device from a desktop UA', () => {
     const ua =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
-    const c = detectClient({ userAgent: ua, maxTouchPoints: 0 }, { width: 1920, height: 1080 });
+    const c = detectClient({ userAgent: ua, maxTouchPoints: 0, language: 'de-CH' }, { width: 1920, height: 1080 });
     expect(c.browser).toBe('Chrome');
     expect(c.os).toBe('Windows');
     expect(c.device).toBe('Desktop');
     expect(c.screen).toBe('1920x1080');
+    expect(c.language).toBe('de-CH');
+    expect(typeof c.timezone).toBe('string');
   });
 
   it('detects mobile iOS', () => {
@@ -56,19 +58,41 @@ describe('track', () => {
       visitor: 'v1',
       type: 'view',
       page: '/about',
+      title: 'About',
       referrer: 'https://x.com',
-      client: { browser: 'Firefox', os: 'Linux', device: 'Desktop', screen: '1280x720' },
+      client: {
+        browser: 'Firefox',
+        os: 'Linux',
+        device: 'Desktop',
+        screen: '1280x720',
+        language: 'en-US',
+        timezone: 'America/New_York',
+      },
+      utm: { source: 'newsletter', medium: 'email', campaign: 'launch' },
     });
     expect(p).toEqual({
       visitor: 'v1',
       type: 'view',
       page: '/about',
+      title: 'About',
       referrer: 'https://x.com',
       browser: 'Firefox',
       os: 'Linux',
       device: 'Desktop',
       screen: '1280x720',
+      language: 'en-US',
+      timezone: 'America/New_York',
+      utm_source: 'newsletter',
+      utm_medium: 'email',
+      utm_campaign: 'launch',
     });
+  });
+
+  it('omits utm fields when no campaign params are present', () => {
+    const p = buildPayload({ visitor: 'v1', type: 'view' });
+    expect(p).toEqual({ visitor: 'v1', type: 'view' });
+    expect('utm_source' in p).toBe(false);
+    expect('language' in p).toBe(false);
   });
 
   it('omits empty referrer, includes duration', () => {

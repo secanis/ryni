@@ -7,17 +7,31 @@ export interface ClientInfo {
   os: string;
   device: string;
   screen: string;
+  language: string;
+  timezone: string;
+}
+
+export interface UtmParams {
+  source?: string;
+  medium?: string;
+  campaign?: string;
 }
 
 export interface Payload {
   visitor: string;
   type: TrackType;
   page?: string;
+  title?: string;
   referrer?: string;
   browser?: string;
   os?: string;
   device?: string;
   screen?: string;
+  language?: string;
+  timezone?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
   duration?: number;
 }
 
