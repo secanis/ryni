@@ -31,6 +31,10 @@ function dayKey(ms) {
     return new Date(ms).toISOString().slice(0, 10);
 }
 
+function hourKey(ms) {
+    return new Date(ms).toISOString().slice(0, 13); // "YYYY-MM-DDTHH"
+}
+
 function durationBucket(seconds) {
     if (seconds <= 10) return '0-10s';
     if (seconds <= 30) return '10-30s';
@@ -63,6 +67,11 @@ function statsHandler(e) {
     var fromMs = toMs(e.request.url.query().get('from') || '');
     var toMsRaw = toMs(e.request.url.query().get('to') || '');
     var toMsEnd = toMsRaw || Date.now();
+
+    // Scale the series granularity to the requested window: hourly for a
+    // ~24h range, daily for longer (7d/30d).
+    var rangeMs = fromMs ? (toMsEnd - fromMs) : 0;
+    var hourly = rangeMs > 0 && rangeMs <= 2 * 24 * 3600 * 1000;
 
     var rows = [];
     try {
@@ -122,7 +131,7 @@ function statsHandler(e) {
 
         (byVisitor[vid] || (byVisitor[vid] = [])).push({ ts: ts2, path: str(r, 'path') });
 
-        var day = dayKey(ts2);
+        var day = hourly ? hourKey(ts2) : dayKey(ts2);
         if (!byDay[day]) byDay[day] = { views: 0, uniqueVisitors: 0, seen: {} };
         byDay[day].views++;
         if (!byDay[day].seen[vid]) {
