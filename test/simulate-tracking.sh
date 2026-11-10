@@ -33,11 +33,17 @@ POOL="${POOL:-15}"
 DELAY="${DELAY:-0.05}"
 
 PAGES=(/ /about /pricing /docs /docs/install /docs/tracking /blog /blog/announcing-ryni /blog/privacy /contact /signup /login)
+# Parallel to PAGES (same index → same page).
+TITLES=(Home About Pricing Docs Install Tracking Blog "Announcing Rýni" Privacy Contact Signup Login)
 REFERRERS=("" "" "" "" "https://www.google.com/" "https://www.google.com/" "https://twitter.com/" "https://news.ycombinator.com/")
 BROWSERS=(Chrome Chrome Chrome Firefox Safari Edge "Chrome iOS")
 OSES=(Windows Windows macOS macOS Linux Android iOS)
 DEVICES=(Desktop Desktop Desktop Mobile Mobile Tablet)
 SCREENS=("1920x1080" "1920x1080" "1366x768" "2560x1440" "390x844" "390x844" "768x1024")
+LANGUAGES=("en-US" "de-CH" "de-DE" "fr-FR" "it-IT" "en-GB")
+TIMEZONES=("Europe/Zurich" "Europe/Berlin" "Europe/Paris" "Europe/Rome" "America/New_York")
+# Empty = no campaign; otherwise "source|medium|campaign".
+UTM=("" "" "" "" "google|cpc|summer_sale" "facebook|paid|brand_launch" "newsletter|email|weekly_digest")
 
 # Fixed pool of visitor ids — repeated picks become returning visitors.
 VISITOR_POOL=()
@@ -58,14 +64,23 @@ for ((n = 0; n < VISITS; n++)); do
   duration=""                    # no duration on the first page of a session
 
   for ((p = 0; p < pages; p++)); do
-    page="${PAGES[$((RANDOM % ${#PAGES[@]}))]}"
+    pi=$((RANDOM % ${#PAGES[@]}))
+    page="${PAGES[$pi]}"
+    title="${TITLES[$pi]}"
     ref="${REFERRERS[$((RANDOM % ${#REFERRERS[@]}))]}"
     browser="${BROWSERS[$((RANDOM % ${#BROWSERS[@]}))]}"
     os="${OSES[$((RANDOM % ${#OSES[@]}))]}"
     device="${DEVICES[$((RANDOM % ${#DEVICES[@]}))]}"
     screen="${SCREENS[$((RANDOM % ${#SCREENS[@]}))]}"
+    lang="${LANGUAGES[$((RANDOM % ${#LANGUAGES[@]}))]}"
+    tz="${TIMEZONES[$((RANDOM % ${#TIMEZONES[@]}))]}"
+    utmpart="${UTM[$((RANDOM % ${#UTM[@]}))]}"
 
-    body="{\"visitor\":\"$visitor\",\"type\":\"view\",\"page\":\"$page\",\"referrer\":\"$ref\",\"browser\":\"$browser\",\"os\":\"$os\",\"device\":\"$device\",\"screen\":\"$screen\""
+    body="{\"visitor\":\"$visitor\",\"type\":\"view\",\"page\":\"$page\",\"title\":\"$title\",\"referrer\":\"$ref\",\"browser\":\"$browser\",\"os\":\"$os\",\"device\":\"$device\",\"screen\":\"$screen\",\"language\":\"$lang\",\"timezone\":\"$tz\""
+    if [ -n "$utmpart" ]; then
+      IFS='|' read -r us um uc <<< "$utmpart"
+      body="$body,\"utm_source\":\"$us\",\"utm_medium\":\"$um\",\"utm_campaign\":\"$uc\""
+    fi
     [ -n "$duration" ] && body="$body,\"duration\":$duration"
     body="$body}"
 
