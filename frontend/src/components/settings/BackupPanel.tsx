@@ -1,5 +1,6 @@
 import { createSignal, For, onMount, Show } from 'solid-js';
 import { pb } from '~/services/pocketbase';
+import { backupName } from '~/utils/backupName';
 
 interface BackupInfo {
   key: string;
@@ -30,7 +31,7 @@ export default function BackupPanel() {
     try {
       await pb.send('/api/backups', {
         method: 'POST',
-        body: { name: `ryni_${new Date().toISOString().replace(/[:.]/g, '-')}.zip` },
+        body: { name: backupName() },
       });
       await load();
     } catch (err) {

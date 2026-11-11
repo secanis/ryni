@@ -21,7 +21,9 @@ try {
 if (cronExpr) {
     cronAdd('ryni_backup', cronExpr, function () {
         try {
-            var name = 'ryni_' + new Date().toISOString().replace(/[:.]/g, '-') + '.zip';
+            // Must match PocketBase's backup name rule ^[a-z0-9_-]+\.zip$
+            // (see apis/backup_create.go), so lowercase the ISO timestamp.
+            var name = 'ryni_' + new Date().toISOString().replace(/[:.]/g, '-').toLowerCase() + '.zip';
             $app.createBackup(name);
             console.log('[ryni-backup] created backup ' + name);
         } catch (e) {
