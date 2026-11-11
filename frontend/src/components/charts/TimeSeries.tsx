@@ -4,6 +4,11 @@ import type { SeriesPoint } from '~/types';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatDate(iso: string): string {
+  if (iso.includes('T')) {
+    // hourly bucket: "YYYY-MM-DDTHH" -> "HH:00"
+    const h = iso.slice(11, 13);
+    return `${h}:00`;
+  }
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return iso;
   return `${MONTHS[(m - 1) % 12]} ${d}`;

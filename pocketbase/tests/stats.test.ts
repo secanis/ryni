@@ -42,6 +42,11 @@ async function stats(as: 'a' | 'b') {
   });
 }
 
+async function statsRange(as: 'a' | 'b', from: string, to: string) {
+  const client = as === 'a' ? a.pb : b.pb;
+  return client.send(`/api/ryni/sites/${siteId}/stats`, { query: { from, to } });
+}
+
 describe('stats route', () => {
   it('aggregates views, uniques, new visitors, duration, bounce rate', async () => {
     // v1: 3 views in one session (10:00, 10:05, 10:10), durations 10 and 5.
@@ -78,6 +83,16 @@ describe('stats route', () => {
     expect(res.daysOfWeek[0].count).toBe(6);
     // durations 10 and 5 both fall in the 0-10s bucket.
     expect(res.durations).toContainEqual({ value: '0-10s', count: 2 });
+  });
+
+  it('scales the series hourly for 24h and daily for longer ranges', async () => {
+    const hourlyRes = await statsRange('a', '2026-11-01T00:00:00.000Z', '2026-11-02T00:00:00.000Z');
+    expect(hourlyRes.series.length).toBeGreaterThan(0);
+    expect(hourlyRes.series[0].date).toContain('T'); // "YYYY-MM-DDTHH"
+
+    const dailyRes = await statsRange('a', '2026-10-01T00:00:00.000Z', '2026-11-02T00:00:00.000Z');
+    expect(dailyRes.series.length).toBeGreaterThan(0);
+    expect(dailyRes.series[0].date).not.toContain('T'); // "YYYY-MM-DD"
   });
 
   it('counts current visitors from recent heartbeats', async () => {
