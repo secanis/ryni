@@ -7,6 +7,13 @@
 #   - test-pb:       vitest integration tests in pocketbase
 #   - lint-helm:     helm lint + template render check
 #
+# Reusable-workflow contract: this workflow has NO `ref` input. Every job
+# checks out the caller's ref (release.yml is dispatched on the release tag),
+# so no expression derived from a workflow input ever reaches
+# `actions/checkout`. That keeps untrusted refs out of a workflow_dispatch
+# reachable, default-branch-scoped run (CodeQL "cache poisoning" rule) and
+# avoids a second source of truth for the tested commit.
+#
 # Actions are pinned to commit SHAs (version in the trailing comment).
 # Required secrets: none.
 
@@ -17,13 +24,9 @@ on:
     branches: ['**']
   pull_request:
   # release.yml calls this workflow so a release is only published when
-  # the test suite is green.
+  # the test suite is green. The caller's ref is tested (no input: see the
+  # header note about checkout refs).
   workflow_call:
-    inputs:
-      ref:
-        description: 'Git ref to test (empty = the triggering ref)'
-        type: string
-        default: ''
 
 # Cancel in-progress runs of the same workflow when a new commit lands.
 # Only for push / pull_request: when called from release.yml
@@ -47,8 +50,6 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
@@ -70,8 +71,6 @@ jobs:
         working-directory: pocketbase
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
@@ -90,8 +89,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ inputs.ref }}
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
         with:
           version: v4.2.2
