@@ -22,10 +22,11 @@
 #   - DOCKERHUB_USERNAME   Docker Hub username
 #   - DOCKERHUB_TOKEN      Docker Hub access token (NOT the account password)
 #
-# Optional (for manual releases):
-#   - workflow_dispatch input `tag` (e.g. v0.1.0) to (re-)release an EXISTING
-#     tag without a tag push. Every job checks out that tag, not the branch
-#     the dispatch was started from.
+# Optional (for manual releases): dispatch this workflow on the EXISTING
+# vX.Y.Z tag ("Use workflow from" → the tag). No tag input exists, so the
+# ref that is tested, built and released is always the ref GitHub checked
+# out — a workflow input can never point the build at code that the tag
+# does not contain.
 #
 # Security: inputs / event data never appear inside `run:` scripts as
 # ${{ }} expressions (script injection); they are passed via `env:` and
@@ -38,12 +39,9 @@ on:
   push:
     tags:
       - 'v*'
+  # Manual (re-)release: dispatch on the vX.Y.Z tag ref itself. The tag is
+  # resolved from github.ref_name, never from an input.
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag (e.g. v0.1.0)'
-        required: true
-        default: ''
 
 # Don't cancel an in-progress release mid-flight
 concurrency:
@@ -59,7 +57,7 @@ permissions:
 jobs:
   # -------------------------------------------------------------------------
   # 0. Resolve + validate the release tag once; every other job uses the
-  # outputs (never ${{ inputs.tag }} directly).
+  # outputs (never the raw ref directly).
   # -------------------------------------------------------------------------
   resolve:
     name: Resolve release tag
@@ -71,16 +69,16 @@ jobs:
       - name: Resolve release tag
         id: version
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_TAG: ${{ inputs.tag }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            TAG="$INPUT_TAG"
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "::error::Release must run on a tag. Re-run the workflow with 'Use workflow from' set to the vX.Y.Z tag."
+            exit 1
           fi
+          TAG="$REF_NAME"
           if [ -z "$TAG" ]; then
-            echo "::error::No tag resolved. Push a v* tag or pass 'tag' input."
+            echo "::error::No tag resolved. Push a v* tag or dispatch the workflow on that tag."
             exit 1
           fi
           if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
@@ -92,7 +90,8 @@ jobs:
 
   # -------------------------------------------------------------------------
   # 0b. Full test suite at the release tag. Nothing is published unless it
-  # passes.
+  # passes. ci.yml has no ref input: it tests the caller's ref, which is the
+  # tag this workflow runs on.
   # -------------------------------------------------------------------------
   test:
     name: Test
@@ -100,8 +99,6 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
-    with:
-      ref: ${{ needs.resolve.outputs.tag }}
 
   # -------------------------------------------------------------------------
   # 1. Build and push multi-arch images to Docker Hub (public, for distribution)
