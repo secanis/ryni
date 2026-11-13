@@ -1,5 +1,10 @@
 # RÝNI
 
+[![CI](https://github.com/secanis/ryni/actions/workflows/ci.yml/badge.svg)](https://github.com/secanis/ryni/actions/workflows/ci.yml)
+[![ryni-pocketbase](https://img.shields.io/docker/v/secanis/ryni-pocketbase?sort=semver&label=pocketbase)](https://hub.docker.com/r/secanis/ryni-pocketbase)
+[![ryni-frontend](https://img.shields.io/docker/v/secanis/ryni-frontend?sort=semver&label=frontend)](https://hub.docker.com/r/secanis/ryni-frontend)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ryni)](https://artifacthub.io/packages/helm/ryni/ryni)
+
 Self-hosted, privacy-preserving web analytics in the spirit of Ackee — no
 cookies, respects Do Not Track, built on the same stack as
 [STJÓRNA](https://github.com/secanis/stjorna) (SolidJS + PocketBase).
