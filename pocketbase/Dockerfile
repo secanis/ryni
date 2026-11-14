@@ -38,6 +38,9 @@ WORKDIR /app
 COPY --from=download /download/pocketbase /app/pocketbase
 
 ARG RYNI_VERSION=dev
+# Unused by this image; declared so the release workflow's shared build-args
+# block (RYNI_VERSION + RYNI_COMMIT) does not warn about an unconsumed arg.
+ARG RYNI_COMMIT=local
 ENV RYNI_VERSION=${RYNI_VERSION}
 
 COPY pb_migrations /app/pb_migrations
