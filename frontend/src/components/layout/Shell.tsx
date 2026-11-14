@@ -17,6 +17,9 @@ export default function Shell(props: ParentProps) {
               <A href="/" class="hover:underline">
                 Dashboard
               </A>
+              <A href="/about" class="hover:underline">
+                About
+              </A>
             </nav>
           </Show>
           <Show when={auth.isSuperuser()}>
