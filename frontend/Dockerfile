@@ -1,6 +1,12 @@
 # Stage 1: Build
 FROM docker.io/node:24-alpine AS builder
 
+# Build metadata stamped into the bundle (see vite.config.ts). The Docker
+# context is frontend/, so there is no .git for the git-describe fallback;
+# release.yml always passes RYNI_VERSION and RYNI_COMMIT.
+ARG RYNI_VERSION=dev
+ARG RYNI_COMMIT=local
+
 WORKDIR /app
 
 COPY package*.json ./

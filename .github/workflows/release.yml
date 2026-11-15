@@ -160,11 +160,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=release-${{ matrix.name }}
           cache-to: type=gha,mode=max
-          # Stamp the release tag into the PocketBase image (RYNI_VERSION env).
-          # The frontend image has no version build-arg; the extra arg is
-          # harmless there.
+          # Stamp the release tag and commit into the images. The frontend
+          # bakes both into the bundle (About page); PocketBase only uses
+          # RYNI_VERSION as an env var, and declares RYNI_COMMIT so the
+          # shared build-args block stays warning-free.
           build-args: |
             RYNI_VERSION=${{ needs.resolve.outputs.tag }}
+            RYNI_COMMIT=${{ github.sha }}
       # Sync the Docker Hub repo description + README (best-effort).
       - name: Sync Docker Hub description
         if: success()

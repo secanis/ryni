@@ -7,6 +7,7 @@ const Setup = lazy(() => import('~/pages/Setup'));
 const Sites = lazy(() => import('~/pages/Sites'));
 const SiteNew = lazy(() => import('~/pages/SiteNew'));
 const Dashboard = lazy(() => import('~/pages/Dashboard'));
+const About = lazy(() => import('~/pages/About'));
 const Settings = lazy(() => import('~/pages/Settings'));
 const AdminUsers = lazy(() => import('~/pages/admin/Users'));
 const Shell = lazy(() => import('~/components/layout/Shell'));
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/sites/new" component={SiteNew} />
         <Route path="/sites/:id" component={Dashboard} />
         <Route path="/settings" component={Settings} />
+        <Route path="/about" component={About} />
         <Route path="/admin/users" component={AdminUsers} />
       </Route>
     </Router>
