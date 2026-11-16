@@ -30,3 +30,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Superpowers scratch (brainstorm mockups, SDD ledgers/workspaces)
+.superpowers/
