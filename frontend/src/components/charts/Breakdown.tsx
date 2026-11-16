@@ -19,7 +19,7 @@ export default function Breakdown(props: { title: string; items: BreakdownItem[]
               <li>
                 <div class="flex justify-between text-sm mb-1">
                   <span class="truncate">{item.value}</span>
-                  <span class="text-muted">{item.count}</span>
+                  <span class="text-muted font-mono tabular-nums">{item.count}</span>
                 </div>
                 <div class="h-1.5 bg-surface-2 rounded">
                   <div

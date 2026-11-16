@@ -45,6 +45,16 @@ describe('Breakdown', () => {
     expect(host.querySelector('button')).toBeNull();
   });
 
+  it('renders counts in a mono face with tabular numerals', () => {
+    const host = renderCard();
+    const counts = [...host.querySelectorAll('span')].filter((s) => /^\d+$/.test(s.textContent ?? ''));
+    expect(counts.length).toBeGreaterThan(0);
+    counts.forEach((c) => {
+      expect(c.getAttribute('class')).toContain('font-mono');
+      expect(c.getAttribute('class')).toContain('tabular-nums');
+    });
+  });
+
   it('cycles the categorical ramp across bars (wraps past 8)', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
