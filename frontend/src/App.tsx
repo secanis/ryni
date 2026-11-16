@@ -14,7 +14,7 @@ const Shell = lazy(() => import('~/components/layout/Shell'));
 
 function RequireAuth(props: ParentProps) {
   return (
-    <Show when={auth.ready()} fallback={<div class="p-8 text-slate-500">Loading…</div>}>
+    <Show when={auth.ready()} fallback={<div class="p-8 text-muted">Loading…</div>}>
       <Show when={auth.isAuthenticated()} fallback={<Navigate href="/login" />}>
         <Shell>{props.children}</Shell>
       </Show>

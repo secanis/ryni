@@ -36,13 +36,13 @@ export default function Setup() {
   }
 
   return (
-    <div class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div class="min-h-screen flex items-center justify-center bg-bg">
       <form
         onSubmit={onSubmit}
-        class="w-full max-w-sm p-8 bg-white dark:bg-slate-900 rounded-lg shadow space-y-4"
+        class="w-full max-w-sm p-8 bg-surface rounded-radius-card shadow space-y-4"
       >
         <h1 class="text-2xl font-semibold">Set up RÝNI</h1>
-        <p class="text-sm text-slate-500">Create the first admin account.</p>
+        <p class="text-sm text-muted">Create the first admin account.</p>
         <div>
           <label for="email" class="block text-sm mb-1">
             Email
@@ -52,7 +52,7 @@ export default function Setup() {
             type="email"
             value={email()}
             onInput={(e) => setEmail(e.currentTarget.value)}
-            class="w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700"
+            class="w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2"
             required
           />
         </div>
@@ -66,15 +66,15 @@ export default function Setup() {
             minLength={8}
             value={password()}
             onInput={(e) => setPassword(e.currentTarget.value)}
-            class="w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700"
+            class="w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2"
             required
           />
         </div>
-        {error() && <p class="text-red-500 text-sm">{error()}</p>}
+        {error() && <p class="text-danger text-sm">{error()}</p>}
         <button
           type="submit"
           disabled={busy()}
-          class="w-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-3 py-2 disabled:opacity-50"
+          class="w-full bg-accent text-accent-fg rounded-radius-sm px-3 py-2 disabled:opacity-50"
         >
           {busy() ? 'Creating…' : 'Create admin'}
         </button>
