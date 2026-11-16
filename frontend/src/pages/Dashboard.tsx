@@ -53,7 +53,7 @@ export default function Dashboard() {
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-semibold">{site()?.name ?? 'Dashboard'}</h1>
-          <div class="text-sm text-slate-500 font-mono flex items-center gap-2 mt-1">
+          <div class="text-sm text-muted font-mono flex items-center gap-2 mt-1">
             <span>{site()?.tracking_id ?? ''}</span>
             <CopyButton text={site()?.tracking_id ?? ''} />
           </div>
@@ -61,7 +61,7 @@ export default function Dashboard() {
             <div class="flex flex-wrap items-center gap-1.5 mt-2">
               <For each={members()!.managers}>
                 {(m) => (
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-accent-3">
                     <span class="font-medium">{m.name || m.email}</span>
                     <span class="opacity-70">manager</span>
                   </span>
@@ -69,7 +69,7 @@ export default function Dashboard() {
               </For>
               <For each={members()!.viewers}>
                 {(m) => (
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-muted">
                     <span class="font-medium">{m.name || m.email}</span>
                     <span class="opacity-70">viewer</span>
                   </span>
@@ -81,13 +81,13 @@ export default function Dashboard() {
         <div class="flex items-center gap-3">
           <button
             onClick={() => setShareOpen(true)}
-            class="px-3 py-1 rounded text-sm border border-slate-300 dark:border-slate-700"
+            class="px-3 py-1 rounded-radius-sm text-sm border border-border"
           >
             Share
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
-            class="px-3 py-1 rounded text-sm border border-slate-300 dark:border-slate-700"
+            class="px-3 py-1 rounded-radius-sm text-sm border border-border"
           >
             Edit
           </button>
@@ -107,7 +107,7 @@ export default function Dashboard() {
         />
       </Show>
 
-      <Show when={!statsStore.loading() && s()} fallback={<p class="text-slate-500">Loading…</p>}>
+      <Show when={!statsStore.loading() && s()} fallback={<p class="text-muted">Loading…</p>}>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard label="Views" value={String(s()!.views)} />
           <StatCard label="Unique visitors" value={String(s()!.uniqueVisitors)} />
@@ -121,7 +121,7 @@ export default function Dashboard() {
           <StatCard label="Current" value={String(s()!.currentVisitors)} />
         </div>
 
-        <div class="p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+        <div class="p-4 bg-surface rounded-radius-card border border-border">
           <h3 class="font-medium mb-3">Views over time</h3>
           <TimeSeries points={s()!.series} />
         </div>
