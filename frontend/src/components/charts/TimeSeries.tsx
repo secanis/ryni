@@ -1,4 +1,4 @@
-import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createSignal, createUniqueId, onCleanup, onMount } from 'solid-js';
 import type { SeriesPoint } from '~/types';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -45,6 +45,26 @@ function xLabelIndices(n: number): number[] {
   return [...set].sort((a, b) => a - b);
 }
 
+// Polyline path string across points. `xy(i)` returns [x, y] for point i.
+function linePath(n: number, xy: (i: number) => [number, number]): string {
+  if (n === 0) return '';
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const [px, py] = xy(i);
+    d += `${i === 0 ? 'M' : 'L'} ${px.toFixed(2)} ${py.toFixed(2)} `;
+  }
+  return d.trimEnd();
+}
+
+// Area path: the line path closed down to the baseline.
+function areaPath(n: number, xy: (i: number) => [number, number], baseline: number): string {
+  if (n === 0) return '';
+  const line = linePath(n, xy);
+  const [x0] = xy(0);
+  const [xn] = xy(n - 1);
+  return `${line} L ${xn.toFixed(2)} ${baseline} L ${x0.toFixed(2)} ${baseline} Z`;
+}
+
 export default function TimeSeries(props: { points: SeriesPoint[]; compact?: boolean }) {
   return (
     <Show when={props.compact} fallback={<FullSeries points={props.points} />}>
@@ -53,12 +73,20 @@ export default function TimeSeries(props: { points: SeriesPoint[]; compact?: boo
   );
 }
 
-// Tiny sparkline for site cards: no axes or tooltip. `preserveAspectRatio="none"`
-// is safe here (no text) and stretches the bars to fill the box.
+// Tiny sparkline for site cards: line + area, no axes or tooltip.
+// `preserveAspectRatio="none"` is safe here (no text).
 function MiniSeries(props: { points: SeriesPoint[] }) {
   const W = 600;
+  const uid = createUniqueId();
+  const n = () => props.points.length;
   const max = () => Math.max(1, ...props.points.map((p) => p.views));
-  const barW = () => (props.points.length ? W / props.points.length : W);
+  const step = () => (n() ? W / n() : W);
+  const x = (i: number) => (i + 0.5) * step();
+  const y = (v: number) => 62 - (v / max()) * 60;
+
+  const line = () => linePath(n(), (i) => [x(i), y(props.points[i].views)]);
+  const area = () => areaPath(n(), (i) => [x(i), y(props.points[i].views)], 62);
+
   return (
     <svg
       viewBox={`0 0 ${W} 64`}
@@ -67,24 +95,31 @@ function MiniSeries(props: { points: SeriesPoint[] }) {
       role="img"
       aria-label="views over time"
     >
-      <For each={props.points}>
-        {(p, i) => {
-          const h = () => Math.max(1, (p.views / max()) * 62);
-          return (
-            <rect
-              x={i() * barW()}
-              y={64 - h()}
-              width={Math.max(1, barW() - 2)}
-              height={h()}
-              class="fill-slate-400 dark:fill-slate-600"
-            >
-              <title>
-                {p.date}: {p.views} views
-              </title>
-            </rect>
-          );
-        }}
-      </For>
+      <defs>
+        <linearGradient id={`aurora-line-${uid}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" style={{ 'stop-color': 'var(--accent)' }} />
+          <stop offset="100%" style={{ 'stop-color': 'var(--accent-3)' }} />
+        </linearGradient>
+        <linearGradient id={`aurora-fill-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" style={{ 'stop-color': 'var(--accent)', 'stop-opacity': '0.35' }} />
+          <stop offset="100%" style={{ 'stop-color': 'var(--accent)', 'stop-opacity': '0' }} />
+        </linearGradient>
+      </defs>
+      <Show when={n() >= 2}>
+        <path class="ryni-area" d={area()} fill={`url(#aurora-fill-${uid})`} />
+        <path
+          class="ryni-line"
+          d={line()}
+          fill="none"
+          stroke={`url(#aurora-line-${uid})`}
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </Show>
+      <Show when={n() === 1}>
+        <circle cx={x(0)} cy={y(props.points[0].views)} r="3" fill="var(--accent)" />
+      </Show>
     </svg>
   );
 }
@@ -96,6 +131,7 @@ function FullSeries(props: { points: SeriesPoint[] }) {
   const [hover, setHover] = createSignal<number | null>(null);
   const [width, setWidth] = createSignal(600);
   let host: HTMLDivElement | undefined;
+  const uid = createUniqueId();
 
   onMount(() => {
     const measure = () => setWidth(host?.clientWidth || 600);
@@ -118,12 +154,14 @@ function FullSeries(props: { points: SeriesPoint[] }) {
   const scale = () => yTicks(rawMax());
   const axisMax = () => scale().max;
   const ticks = () => scale().ticks;
-  const barW = () => (n() ? plotW() / n() : plotW());
-  const barX = (i: number) => L + i * barW();
-  const barY = (views: number) => T + plotH() - (views / axisMax()) * plotH();
-  const barH = (views: number) => Math.max(0, (views / axisMax()) * plotH());
+  const step = () => (n() ? plotW() / n() : plotW());
+  const x = (i: number) => L + (i + 0.5) * step();
+  const y = (views: number) => T + plotH() - (views / axisMax()) * plotH();
   const labels = () => xLabelIndices(n());
   const baseline = () => T + plotH();
+
+  const line = () => linePath(n(), (i) => [x(i), y(props.points[i].views)]);
+  const area = () => areaPath(n(), (i) => [x(i), y(props.points[i].views)], baseline());
 
   const hovered = () => {
     const i = hover();
@@ -140,6 +178,17 @@ function FullSeries(props: { points: SeriesPoint[] }) {
         aria-label="views over time"
         onMouseLeave={() => setHover(null)}
       >
+        <defs>
+          <linearGradient id={`aurora-line-${uid}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" style={{ 'stop-color': 'var(--accent)' }} />
+            <stop offset="100%" style={{ 'stop-color': 'var(--accent-3)' }} />
+          </linearGradient>
+          <linearGradient id={`aurora-fill-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" style={{ 'stop-color': 'var(--accent)', 'stop-opacity': '0.35' }} />
+            <stop offset="100%" style={{ 'stop-color': 'var(--accent)', 'stop-opacity': '0' }} />
+          </linearGradient>
+        </defs>
+
         {/* horizontal gridlines + y-axis tick labels */}
         <For each={ticks()}>
           {(t) => (
@@ -147,17 +196,17 @@ function FullSeries(props: { points: SeriesPoint[] }) {
               <line
                 x1={L}
                 x2={W() - R}
-                y1={barY(t)}
-                y2={barY(t)}
-                class="stroke-slate-200 dark:stroke-slate-700"
+                y1={y(t)}
+                y2={y(t)}
+                class="stroke-border"
                 stroke-width="1"
               />
               <text
                 x={L - 6}
-                y={barY(t)}
+                y={y(t)}
                 dy="0.35em"
                 text-anchor="end"
-                class="fill-slate-400 text-[10px]"
+                class="fill-muted text-[10px]"
               >
                 {String(t)}
               </text>
@@ -168,12 +217,7 @@ function FullSeries(props: { points: SeriesPoint[] }) {
         {/* x-axis date labels */}
         <For each={labels()}>
           {(idx) => (
-            <text
-              x={barX(idx) + barW() / 2}
-              y={H - 6}
-              text-anchor="middle"
-              class="fill-slate-400 text-[10px]"
-            >
+            <text x={x(idx)} y={H - 6} text-anchor="middle" class="fill-muted text-[10px]">
               {formatDate(props.points[idx].date)}
             </text>
           )}
@@ -185,26 +229,45 @@ function FullSeries(props: { points: SeriesPoint[] }) {
           x2={W() - R}
           y1={baseline()}
           y2={baseline()}
-          class="stroke-slate-300 dark:stroke-slate-600"
+          class="stroke-border-strong"
           stroke-width="1"
         />
 
-        {/* bars */}
+        {/* area + line */}
+        <Show when={n() >= 2}>
+          <path class="ryni-area" d={area()} fill={`url(#aurora-fill-${uid})`} />
+          <path
+            class="ryni-line"
+            d={line()}
+            fill="none"
+            stroke={`url(#aurora-line-${uid})`}
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </Show>
+
+        {/* single-point dot */}
+        <Show when={n() === 1}>
+          <circle cx={x(0)} cy={y(props.points[0].views)} r="4" fill="var(--accent)" />
+        </Show>
+
+        {/* invisible per-point hover hit targets */}
         <For each={props.points}>
           {(p, i) => (
             <rect
-              x={barX(i())}
-              y={barY(p.views)}
-              width={Math.max(1, barW() - 2)}
-              height={barH(p.views)}
+              x={x(i()) - step() / 2}
+              y={T}
+              width={step()}
+              height={plotH()}
+              fill="transparent"
               aria-label={`${p.date}: ${p.views} views, ${p.uniqueVisitors} visitors`}
-              class={hover() === i() ? 'fill-slate-500 dark:fill-slate-400' : 'fill-slate-400 dark:fill-slate-600'}
               onMouseEnter={() => setHover(i())}
             />
           )}
         </For>
 
-        {/* hover tooltip */}
+        {/* hover highlight + tooltip */}
         <Show when={hovered()}>
           {(h) => {
             const dateStr = () => formatDate(h().point.date);
@@ -212,34 +275,45 @@ function FullSeries(props: { points: SeriesPoint[] }) {
             const tw = () => Math.max(dateStr().length, metricsStr().length) * 6.2 + 16;
             const th = 36;
             const gap = 8;
-            const cx = () => barX(h().index) + barW() / 2;
+            const cx = () => x(h().index);
             const tx = () => Math.min(Math.max(cx(), tw() / 2 + 4), W() - tw() / 2 - 4);
-            const ry = () => Math.max(2, barY(h().point.views) - gap - th);
+            const ry = () => Math.max(2, y(h().point.views) - gap - th);
             return (
               <g pointer-events="none">
+                <line
+                  x1={cx()}
+                  x2={cx()}
+                  y1={T}
+                  y2={baseline()}
+                  class="stroke-accent-3"
+                  stroke-width="1"
+                  stroke-dasharray="3 3"
+                />
+                <circle
+                  cx={cx()}
+                  cy={y(h().point.views)}
+                  r="4"
+                  class="fill-surface stroke-accent-3"
+                  stroke-width="2"
+                />
                 <rect
                   x={tx() - tw() / 2}
                   y={ry()}
                   width={tw()}
                   height={th}
                   rx={6}
-                  class="fill-white dark:fill-slate-800 stroke-slate-200 dark:stroke-slate-700"
+                  class="fill-surface stroke-border"
                   stroke-width="1"
                 />
                 <text
                   x={tx()}
                   y={ry() + 16}
                   text-anchor="middle"
-                  class="fill-slate-700 dark:fill-slate-200 text-[11px] font-medium"
+                  class="fill-text text-[11px] font-medium"
                 >
                   {dateStr()}
                 </text>
-                <text
-                  x={tx()}
-                  y={ry() + 29}
-                  text-anchor="middle"
-                  class="fill-slate-500 dark:fill-slate-400 text-[11px]"
-                >
+                <text x={tx()} y={ry() + 29} text-anchor="middle" class="fill-muted text-[11px]">
                   {metricsStr()}
                 </text>
               </g>

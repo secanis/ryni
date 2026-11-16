@@ -44,4 +44,17 @@ describe('Breakdown', () => {
     expect(host.querySelectorAll('li')).toHaveLength(3);
     expect(host.querySelector('button')).toBeNull();
   });
+
+  it('cycles the categorical ramp across bars (wraps past 8)', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    render(() => <Breakdown title="Pages" items={Array.from({ length: 9 }, (_, i) => ({ value: `p${i}`, count: 9 - i }))} />, host);
+    // expand past the default 5 visible items to see the 9th (wrap) bar
+    const more = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('more'));
+    more?.click();
+    const fills = [...host.querySelectorAll('div[style*="--series-"]')];
+    expect(fills.length).toBe(9);
+    expect(fills[0].getAttribute('style')).not.toBe(fills[1].getAttribute('style'));
+    expect(fills[8].getAttribute('style')).toContain('--series-1'); // wraps
+  });
 });

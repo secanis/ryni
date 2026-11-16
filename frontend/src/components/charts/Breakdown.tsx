@@ -10,21 +10,21 @@ export default function Breakdown(props: { title: string; items: BreakdownItem[]
   const hidden = () => props.items.length - DEFAULT_VISIBLE;
 
   return (
-    <div class="p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+    <div class="p-4 bg-surface rounded-radius-card border border-border">
       <h3 class="font-medium mb-3">{props.title}</h3>
-      <Show when={props.items.length > 0} fallback={<p class="text-sm text-slate-500">No data</p>}>
+      <Show when={props.items.length > 0} fallback={<p class="text-sm text-muted">No data</p>}>
         <ul class="space-y-2">
           <For each={visible()}>
-            {(item) => (
+            {(item, i) => (
               <li>
                 <div class="flex justify-between text-sm mb-1">
                   <span class="truncate">{item.value}</span>
-                  <span class="text-slate-500">{item.count}</span>
+                  <span class="text-muted">{item.count}</span>
                 </div>
-                <div class="h-1.5 bg-slate-100 dark:bg-slate-800 rounded">
+                <div class="h-1.5 bg-surface-2 rounded">
                   <div
-                    class="h-1.5 bg-slate-400 dark:bg-slate-600 rounded"
-                    style={{ width: `${(item.count / max()) * 100}%` }}
+                    class="h-1.5 rounded"
+                    style={{ width: `${(item.count / max()) * 100}%`, background: `var(--series-${(i() % 8) + 1})` }}
                   />
                 </div>
               </li>
@@ -34,7 +34,7 @@ export default function Breakdown(props: { title: string; items: BreakdownItem[]
         <Show when={hidden() > 0}>
           <button
             onClick={() => setExpanded((v) => !v)}
-            class="mt-2 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            class="mt-2 text-xs text-muted hover:text-text"
           >
             {expanded() ? 'Show less' : `+${hidden()} more`}
           </button>
