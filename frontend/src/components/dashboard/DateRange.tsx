@@ -28,10 +28,10 @@ export default function DateRange(props: {
         {(p) => (
           <button
             onClick={() => select(p.ms)}
-            class={`px-3 py-1 rounded text-sm border ${
+            class={`px-3 py-1 rounded-radius-sm text-sm border ${
               props.selected === p.key
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
+                ? 'bg-accent text-accent-fg border-accent'
+                : 'bg-surface border-border'
             }`}
           >
             {p.label}

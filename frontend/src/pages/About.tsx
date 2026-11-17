@@ -113,8 +113,7 @@ const LINKS = [
   },
 ];
 
-const card =
-  'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5';
+const card = 'bg-surface border border-border radius-card p-5';
 
 export default function About() {
   // Compile-time constants: read once, no signal needed.
@@ -124,15 +123,15 @@ export default function About() {
   return (
     <div class="space-y-6 max-w-3xl">
       <div class="flex items-center gap-3">
-        <Info size={24} class="text-slate-900 dark:text-slate-100" />
+        <Info size={24} class="text-text" />
         <div>
           <h1 class="text-2xl font-semibold">About RÝNI</h1>
-          <p class="text-sm text-slate-500">Privacy-preserving web analytics</p>
+          <p class="text-sm text-muted">Privacy-preserving web analytics</p>
         </div>
       </div>
 
       <Show when={auth.isAuthenticated()}>
-        <p class="text-sm text-slate-600 dark:text-slate-400">
+        <p class="text-sm text-muted">
           Signed in as {String(auth.user()?.email ?? 'unknown user')}
         </p>
       </Show>
@@ -147,14 +146,14 @@ export default function About() {
                   href={l.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="flex items-center gap-3 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                  class="flex items-center gap-3 text-muted hover:text-text"
                 >
                   <l.icon size={18} />
                   <span class="flex-1">
                     <span class="font-medium">{l.label}</span>
-                    <span class="ml-2 text-xs text-slate-500 break-all">{l.value}</span>
+                    <span class="ml-2 text-xs text-muted break-all">{l.value}</span>
                   </span>
-                  <span class="text-slate-400">↗</span>
+                  <span class="text-muted">↗</span>
                 </a>
               </li>
             )}
@@ -165,15 +164,15 @@ export default function About() {
       <section class={card}>
         <h2 class="text-base font-medium mb-4">Build</h2>
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt class="flex items-center gap-2 text-slate-500">
+          <dt class="flex items-center gap-2 text-muted">
             <Info size={14} /> Version
           </dt>
-          <dd class="font-mono break-all text-slate-900 dark:text-slate-100">{info.version}</dd>
+          <dd class="font-mono break-all text-text">{info.version}</dd>
 
-          <dt class="flex items-center gap-2 text-slate-500">
+          <dt class="flex items-center gap-2 text-muted">
             <Hash size={14} /> Commit
           </dt>
-          <dd class="font-mono break-all text-slate-900 dark:text-slate-100">
+          <dd class="font-mono break-all text-text">
             <Show when={link} fallback={shortCommit(info.commit)}>
               <a href={link!} target="_blank" rel="noopener noreferrer" class="hover:underline">
                 {shortCommit(info.commit)}
@@ -181,10 +180,10 @@ export default function About() {
             </Show>
           </dd>
 
-          <dt class="flex items-center gap-2 text-slate-500">
+          <dt class="flex items-center gap-2 text-muted">
             <Calendar size={14} /> Built
           </dt>
-          <dd class="font-mono break-all text-slate-900 dark:text-slate-100">
+          <dd class="font-mono break-all text-text">
             {formatBuildTime(info.buildTime) || info.buildTime || 'unknown'}
           </dd>
         </dl>
@@ -192,12 +191,12 @@ export default function About() {
 
       <section class={card}>
         <h2 class="text-base font-medium mb-1">Built on</h2>
-        <p class="text-xs text-slate-500 mb-4">The stack RÝNI is assembled from.</p>
-        <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+        <p class="text-xs text-muted mb-4">The stack RÝNI is assembled from.</p>
+        <ul class="divide-y divide-border">
           <For each={DEPENDENCIES}>
             {(d) => (
               <li class="py-3 flex items-start gap-3">
-                <span class="text-xs uppercase tracking-wide text-slate-400 w-24 shrink-0 pt-0.5">
+                <span class="text-xs uppercase tracking-wide text-muted w-24 shrink-0 pt-0.5">
                   {d.role}
                 </span>
                 <div class="flex-1 min-w-0">
@@ -205,20 +204,20 @@ export default function About() {
                     href={d.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="font-medium text-slate-900 dark:text-slate-100 hover:underline"
+                    class="font-medium text-text hover:underline"
                   >
                     {d.name}
                   </a>
-                  <p class="text-sm text-slate-600 dark:text-slate-400">{d.description}</p>
+                  <p class="text-sm text-muted">{d.description}</p>
                 </div>
-                <span class="text-xs font-mono text-slate-500 shrink-0 pt-0.5">{d.license}</span>
+                <span class="text-xs font-mono text-muted shrink-0 pt-0.5">{d.license}</span>
               </li>
             )}
           </For>
         </ul>
       </section>
 
-      <p class="text-xs text-slate-400 text-center pt-2">
+      <p class="text-xs text-muted text-center pt-2">
         RÝNI sets no cookies, honours Do Not Track and stores no IP addresses. Licensed under
         AGPL-3.0-or-later.
       </p>

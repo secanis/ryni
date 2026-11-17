@@ -84,24 +84,24 @@ export default function BackupPanel() {
         <button
           onClick={() => void create()}
           disabled={busy()}
-          class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2 disabled:opacity-50"
+          class="bg-accent text-accent-fg rounded-radius-sm px-4 py-2 disabled:opacity-50"
         >
           {busy() ? 'Creating…' : 'Create backup'}
         </button>
       </div>
 
-      {error() && <p class="text-red-500 text-sm">{error()}</p>}
+      {error() && <p class="text-danger text-sm">{error()}</p>}
       <Show
         when={backups().length > 0}
-        fallback={<p class="text-slate-500">No backups yet.</p>}
+        fallback={<p class="text-muted">No backups yet.</p>}
       >
-        <ul class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
+        <ul class="bg-surface rounded-radius-card border border-border divide-y divide-border">
           <For each={backups()}>
             {(b) => (
               <li class="flex items-center justify-between p-3">
                 <div>
                   <div class="text-sm font-mono">{b.key}</div>
-                  <div class="text-xs text-slate-500">
+                  <div class="text-xs text-muted">
                     {sizeLabel(b.size)} · {b.modified}
                   </div>
                 </div>
@@ -109,7 +109,7 @@ export default function BackupPanel() {
                   <button onClick={() => void download(b.key)} class="text-sm underline">
                     Download
                   </button>
-                  <button onClick={() => void remove(b.key)} class="text-sm underline text-red-600">
+                  <button onClick={() => void remove(b.key)} class="text-sm underline text-danger">
                     Delete
                   </button>
                 </div>

@@ -28,12 +28,12 @@ export default function SiteCard(props: { site: Site }) {
   return (
     <div
       onClick={() => navigate(`/sites/${props.site.id}`)}
-      class="p-4 bg-white dark:bg-slate-900 rounded-lg shadow hover:shadow-md transition border border-slate-200 dark:border-slate-800 cursor-pointer"
+      class="p-4 bg-surface rounded-radius-card shadow hover:shadow-md transition border border-border cursor-pointer"
     >
       <div class="flex items-center justify-between gap-2">
         <div class="min-w-0">
           <div class="font-medium truncate">{props.site.name}</div>
-          <div class="text-sm text-slate-500 font-mono">{props.site.tracking_id}</div>
+          <div class="text-sm text-muted font-mono">{props.site.tracking_id}</div>
         </div>
         <span onClick={(e) => e.stopPropagation()}>
           <CopyButton text={props.site.tracking_id} />
@@ -45,11 +45,11 @@ export default function SiteCard(props: { site: Site }) {
           <div class="text-sm space-y-1 shrink-0">
             <div>
               <span class="font-semibold">{mini()!.views}</span>
-              <span class="text-slate-500"> views</span>
+              <span class="text-muted"> views</span>
             </div>
             <div>
               <span class="font-semibold">{mini()!.uniqueVisitors}</span>
-              <span class="text-slate-500"> visitors</span>
+              <span class="text-muted"> visitors</span>
             </div>
           </div>
           <div class="flex-1 min-w-0">

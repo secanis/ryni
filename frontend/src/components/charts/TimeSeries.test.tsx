@@ -22,11 +22,16 @@ afterEach(() => {
 });
 
 describe('TimeSeries', () => {
-  it('renders one bar per point', () => {
+  it('renders an area path and a line path', () => {
     const host = renderChart();
-    // bars only — tooltip rect is absent until hover
-    const bars = [...host.querySelectorAll('rect')].filter((r) => r.getAttribute('aria-label'));
-    expect(bars).toHaveLength(points.length);
+    expect(host.querySelector('path.ryni-area')).not.toBeNull();
+    expect(host.querySelector('path.ryni-line')).not.toBeNull();
+  });
+
+  it('renders one hover hit target per point', () => {
+    const host = renderChart();
+    const hits = [...host.querySelectorAll('rect')].filter((r) => r.getAttribute('aria-label'));
+    expect(hits).toHaveLength(points.length);
   });
 
   it('draws x-axis date labels', () => {
@@ -45,10 +50,27 @@ describe('TimeSeries', () => {
 
   it('shows a tooltip on hover with views and unique visitors', () => {
     const host = renderChart();
-    const bar = [...host.querySelectorAll('rect')].find((r) => r.getAttribute('aria-label'));
-    bar?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+    const hit = [...host.querySelectorAll('rect')].find((r) => r.getAttribute('aria-label'));
+    hit?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
     const texts = [...host.querySelectorAll('text')].map((t) => t.textContent);
     expect(texts.some((t) => t?.includes('views ·'))).toBe(true);
     expect(texts.some((t) => t?.includes('visitors'))).toBe(true);
+  });
+
+  it('renders empty and single-point series without error', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    render(() => <TimeSeries points={[]} />, host);
+    render(() => <TimeSeries points={[points[0]]} />, host);
+    expect(host.querySelector('svg')).not.toBeNull();
+  });
+
+  it('uses distinct gradient ids when two charts render together', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    render(() => <TimeSeries points={points} />, host);
+    render(() => <TimeSeries points={points} />, host);
+    const ids = [...host.querySelectorAll('linearGradient')].map((g) => g.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

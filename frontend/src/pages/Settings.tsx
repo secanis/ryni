@@ -17,8 +17,8 @@ export default function Settings() {
     <div class="space-y-6 max-w-2xl">
       <h1 class="text-2xl font-semibold">Settings</h1>
 
-      <Show when={auth.isSuperuser()} fallback={<p class="text-slate-500">Admin only.</p>}>
-        <div class="flex gap-1 border-b border-slate-200 dark:border-slate-800">
+      <Show when={auth.isSuperuser()} fallback={<p class="text-muted">Admin only.</p>}>
+        <div class="flex gap-1 border-b border-border">
           <For each={TABS}>
             {(t) => (
               <button
@@ -26,8 +26,8 @@ export default function Settings() {
                 onClick={() => setTab(t.id)}
                 class={`px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${
                   tab() === t.id
-                    ? 'border-slate-900 dark:border-slate-100 text-slate-900 dark:text-white font-medium'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    ? 'border-accent text-text font-medium'
+                    : 'border-transparent text-muted hover:text-text'
                 }`}
               >
                 {t.label}

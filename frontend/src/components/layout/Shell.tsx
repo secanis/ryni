@@ -6,14 +6,14 @@ import UserMenu from './UserMenu';
 
 export default function Shell(props: ParentProps) {
   return (
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header class="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-slate-800">
+    <div class="min-h-screen bg-bg">
+      <header class="flex items-center justify-between px-6 py-3 border-b border-border">
         <div class="flex items-center gap-6">
-          <a href="/" class="font-semibold text-lg text-slate-900 dark:text-white">
-            RÝNI
+          <a href="/" class="font-display font-semibold text-lg text-text">
+            RÝNI<span class="text-accent">.</span>
           </a>
           <Show when={auth.isAuthenticated()}>
-            <nav class="flex gap-3 text-sm text-slate-600 dark:text-slate-300">
+            <nav class="flex gap-3 text-sm text-muted">
               <A href="/" class="hover:underline">
                 Dashboard
               </A>
@@ -23,7 +23,7 @@ export default function Shell(props: ParentProps) {
             </nav>
           </Show>
           <Show when={auth.isSuperuser()}>
-            <nav class="flex gap-3 text-sm text-slate-600 dark:text-slate-300">
+            <nav class="flex gap-3 text-sm text-muted">
               <A href="/admin/users" class="hover:underline">
                 Users
               </A>

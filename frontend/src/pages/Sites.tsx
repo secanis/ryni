@@ -15,16 +15,16 @@ export default function Sites() {
         <h1 class="text-2xl font-semibold">Sites</h1>
         <button
           onClick={() => navigate('/sites/new')}
-          class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2"
+          class="bg-accent text-accent-fg rounded-radius-sm px-4 py-2"
         >
           Add site
         </button>
       </div>
 
-      <Show when={!sitesStore.loading()} fallback={<p class="text-slate-500">Loading…</p>}>
+      <Show when={!sitesStore.loading()} fallback={<p class="text-muted">Loading…</p>}>
         <Show
           when={sitesStore.sites().length > 0}
-          fallback={<p class="text-slate-500">No sites yet. Add one to get started.</p>}
+          fallback={<p class="text-muted">No sites yet. Add one to get started.</p>}
         >
           <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             <For each={sitesStore.sites()}>{(site) => <SiteCard site={site} />}</For>

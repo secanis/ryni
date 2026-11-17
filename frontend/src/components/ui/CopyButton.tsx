@@ -21,9 +21,9 @@ export default function CopyButton(props: { text: string; label?: string }) {
       onClick={() => void copy()}
       title={props.label ?? 'Copy'}
       aria-label={props.label ?? 'Copy'}
-      class="inline-flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+      class="inline-flex items-center justify-center text-muted hover:text-text transition-colors"
     >
-      {copied() ? <Check size={14} class="text-green-500" /> : <Copy size={14} />}
+      {copied() ? <Check size={14} class="text-accent" /> : <Copy size={14} />}
     </button>
   );
 }

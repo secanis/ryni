@@ -61,7 +61,7 @@ export default function SiteNew() {
               id="name"
               value={name()}
               onInput={(e) => setName(e.currentTarget.value)}
-              class="w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700"
+              class="w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2"
               required
             />
           </div>
@@ -70,7 +70,7 @@ export default function SiteNew() {
             <input
               value={trackingId()}
               readOnly
-              class="w-full border rounded px-3 py-2 font-mono bg-slate-100 dark:bg-slate-800 dark:border-slate-700"
+              class="w-full border border-border rounded-radius-sm px-3 py-2 font-mono bg-surface-2"
             />
           </div>
           <div>
@@ -82,14 +82,14 @@ export default function SiteNew() {
               value={origins()}
               placeholder="https://mysite.example"
               onInput={(e) => setOrigins(e.currentTarget.value)}
-              class="w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700"
+              class="w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2"
             />
           </div>
-          {error() && <p class="text-red-500 text-sm">{error()}</p>}
+          {error() && <p class="text-danger text-sm">{error()}</p>}
           <button
             type="submit"
             disabled={busy()}
-            class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2 disabled:opacity-50"
+            class="bg-accent text-accent-fg rounded-radius-sm px-4 py-2 disabled:opacity-50"
           >
             {busy() ? 'Creating…' : 'Create site'}
           </button>

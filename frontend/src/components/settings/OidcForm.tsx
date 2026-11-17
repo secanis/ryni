@@ -41,7 +41,7 @@ export default function OidcForm() {
     }
   }
 
-  const field = 'w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700';
+  const field = 'w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2';
 
   return (
     <form onSubmit={onSubmit} class="space-y-4 max-w-md">
@@ -93,12 +93,12 @@ export default function OidcForm() {
           required
         />
       </div>
-      {error() && <p class="text-red-500 text-sm">{error()}</p>}
-      {message() && <p class="text-green-600 text-sm">{message()}</p>}
+      {error() && <p class="text-danger text-sm">{error()}</p>}
+      {message() && <p class="text-accent text-sm">{message()}</p>}
       <button
         type="submit"
         disabled={busy()}
-        class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2 disabled:opacity-50"
+        class="bg-accent text-accent-fg rounded-radius-sm px-4 py-2 disabled:opacity-50"
       >
         {busy() ? 'Saving…' : 'Save'}
       </button>

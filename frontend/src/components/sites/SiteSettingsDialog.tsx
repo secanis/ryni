@@ -24,7 +24,7 @@ export default function SiteSettingsDialog(props: {
   const [error, setError] = createSignal('');
 
   const server = () => window.location.origin;
-  const field = 'w-full border rounded px-3 py-2 dark:bg-slate-800 dark:border-slate-700';
+  const field = 'w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2';
 
   async function save() {
     setBusy(true);
@@ -65,7 +65,7 @@ export default function SiteSettingsDialog(props: {
       onClick={() => props.onClose()}
     >
       <div
-        class="bg-white dark:bg-slate-900 rounded-lg shadow p-6 w-full max-w-2xl space-y-6 my-8"
+        class="bg-surface rounded-radius-card shadow p-6 w-full max-w-2xl space-y-6 my-8"
         onClick={(e) => e.stopPropagation()}
       >
         <div class="flex items-center justify-between">
@@ -73,7 +73,7 @@ export default function SiteSettingsDialog(props: {
           <button
             onClick={() => props.onClose()}
             aria-label="Close"
-            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            class="text-muted hover:text-text"
           >
             ✕
           </button>
@@ -118,28 +118,28 @@ export default function SiteSettingsDialog(props: {
           </div>
         </div>
 
-        <div class="border-t border-slate-200 dark:border-slate-800 pt-4">
+        <div class="border-t border-border pt-4">
           <h3 class="font-medium mb-3">Tracking code</h3>
           <Snippet input={{ server: server(), site: props.site.tracking_id, detailed: false }} />
         </div>
 
-        {error() && <p class="text-red-500 text-sm">{error()}</p>}
+        {error() && <p class="text-danger text-sm">{error()}</p>}
 
         <div class="flex items-center justify-between pt-2">
-          <button onClick={() => void remove()} class="text-sm text-red-600 underline">
+          <button onClick={() => void remove()} class="text-sm text-danger underline">
             Delete site
           </button>
           <div class="flex gap-2">
             <button
               onClick={() => props.onClose()}
-              class="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-sm"
+              class="px-4 py-2 rounded-radius-sm border border-border text-sm"
             >
               Cancel
             </button>
             <button
               onClick={() => void save()}
               disabled={busy()}
-              class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded px-4 py-2 text-sm disabled:opacity-50"
+              class="bg-accent text-accent-fg rounded-radius-sm px-4 py-2 text-sm disabled:opacity-50"
             >
               {busy() ? 'Saving…' : 'Save'}
             </button>
