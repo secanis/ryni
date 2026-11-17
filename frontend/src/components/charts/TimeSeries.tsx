@@ -1,4 +1,4 @@
-import { For, Show, createSignal, createUniqueId, onCleanup, onMount } from 'solid-js';
+import { For, Show, createMemo, createSignal, createUniqueId, onCleanup, onMount } from 'solid-js';
 import type { SeriesPoint } from '~/types';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -84,8 +84,8 @@ function MiniSeries(props: { points: SeriesPoint[] }) {
   const x = (i: number) => (i + 0.5) * step();
   const y = (v: number) => 62 - (v / max()) * 60;
 
-  const line = () => linePath(n(), (i) => [x(i), y(props.points[i].views)]);
-  const area = () => areaPath(n(), (i) => [x(i), y(props.points[i].views)], 62);
+  const line = createMemo(() => linePath(n(), (i) => [x(i), y(props.points[i].views)]));
+  const area = createMemo(() => areaPath(n(), (i) => [x(i), y(props.points[i].views)], 62));
 
   return (
     <svg
@@ -160,8 +160,8 @@ function FullSeries(props: { points: SeriesPoint[] }) {
   const labels = () => xLabelIndices(n());
   const baseline = () => T + plotH();
 
-  const line = () => linePath(n(), (i) => [x(i), y(props.points[i].views)]);
-  const area = () => areaPath(n(), (i) => [x(i), y(props.points[i].views)], baseline());
+  const line = createMemo(() => linePath(n(), (i) => [x(i), y(props.points[i].views)]));
+  const area = createMemo(() => areaPath(n(), (i) => [x(i), y(props.points[i].views)], baseline()));
 
   const hovered = () => {
     const i = hover();
