@@ -3,15 +3,16 @@ import { Download, Trash2 } from 'lucide-solid';
 import { pb } from '~/services/pocketbase';
 import { backupDownloadUrl } from '~/utils/backupDownloadUrl';
 import { backupName } from '~/utils/backupName';
-
-interface BackupInfo {
-  key: string;
-  size: number;
-  modified: string;
-}
+import {
+  createBackup,
+  deleteBackup,
+  listBackups,
+  sizeLabel,
+  type BackupInfo,
+} from '~/utils/backup';
 
 // Backup management panel (superuser only — gated by the parent Settings
-// page). Lists, creates, downloads and deletes system backups.
+// page). Creates, lists, downloads and deletes system backups.
 
 export default function BackupPanel() {
   const [backups, setBackups] = createSignal<BackupInfo[]>([]);
@@ -19,8 +20,7 @@ export default function BackupPanel() {
   const [error, setError] = createSignal('');
 
   async function load() {
-    const res = await pb.send('/api/backups', { method: 'GET' });
-    setBackups(res as unknown as BackupInfo[]);
+    setBackups(await listBackups());
   }
 
   onMount(() => {
@@ -31,10 +31,7 @@ export default function BackupPanel() {
     setBusy(true);
     setError('');
     try {
-      await pb.send('/api/backups', {
-        method: 'POST',
-        body: { name: backupName() },
-      });
+      await createBackup(backupName());
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Backup failed');
@@ -44,7 +41,7 @@ export default function BackupPanel() {
   }
 
   async function remove(key: string) {
-    await pb.send(`/api/backups/${encodeURIComponent(key)}`, { method: 'DELETE' });
+    await deleteBackup(key);
     await load();
   }
 
@@ -71,12 +68,6 @@ export default function BackupPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed');
     }
-  }
-
-  function sizeLabel(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   return (
