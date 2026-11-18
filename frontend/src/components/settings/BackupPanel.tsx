@@ -54,11 +54,11 @@ export default function BackupPanel() {
   async function download(key: string) {
     setError('');
     try {
-      // Fetch the backup with the token in the Authorization header — never
-      // the query string, which would leak into logs/browser history/Referer.
-      const res = await fetch(backupDownloadUrl(key), {
-        headers: { Authorization: pb.authStore.token },
-      });
+      // PB's backup download route requires a short-lived *file* token in the
+      // query — it does not accept the Authorization header. The file token is
+      // scoped (not the session token) and expires quickly.
+      const fileToken = await pb.files.getToken();
+      const res = await fetch(backupDownloadUrl(key, fileToken));
       if (!res.ok) {
         throw new Error(`Download failed (${res.status})`);
       }
