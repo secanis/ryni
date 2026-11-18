@@ -13,7 +13,7 @@ vi.mock('~/services/pocketbase', () => ({
   },
 }));
 
-import { adminStore } from './admin';
+import { adminStore, buildUserRows } from './admin';
 
 describe('admin store', () => {
   it('setUserSiteRole promotes a user to manager without duplicating', async () => {
@@ -39,5 +39,34 @@ describe('admin store', () => {
     await adminStore.setUserSiteRole('user1', 'site1', null);
 
     expect(mock.update).toHaveBeenCalledWith('site1', { managers: [], viewers: [] });
+  });
+});
+
+describe('buildUserRows', () => {
+  it('lists admins first with role admin, then regular users with role user', () => {
+    const rows = buildUserRows(
+      [
+        { id: 'u1', email: 'b@example.com', name: 'B' },
+        { id: 'u2', email: 'c@example.com' },
+      ],
+      [{ id: 'a1', email: 'admin@example.com' }],
+    );
+
+    expect(rows[0]).toEqual({ id: 'a1', email: 'admin@example.com', name: '', role: 'admin' });
+    expect(rows.slice(1).map((r) => r.role)).toEqual(['user', 'user']);
+  });
+
+  it('does not duplicate a user whose email matches an admin', () => {
+    const rows = buildUserRows(
+      [
+        { id: 'u1', email: 'Admin@example.com', name: 'A' },
+        { id: 'u2', email: 'b@example.com' },
+      ],
+      [{ id: 'a1', email: 'admin@example.com' }],
+    );
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0].role).toBe('admin');
+    expect(rows[1].email).toBe('b@example.com');
   });
 });
