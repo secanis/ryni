@@ -2,7 +2,6 @@ import { createSignal, For, Show } from 'solid-js';
 import { auth } from '~/stores/auth';
 import OidcForm from '~/components/settings/OidcForm';
 import BackupPanel from '~/components/settings/BackupPanel';
-import RestorePanel from '~/components/settings/RestorePanel';
 
 type Tab = 'oidc' | 'backup';
 
@@ -37,15 +36,7 @@ export default function Settings() {
           </For>
         </div>
 
-        <Show
-          when={tab() === 'oidc'}
-          fallback={
-            <div class="space-y-8">
-              <BackupPanel />
-              <RestorePanel />
-            </div>
-          }
-        >
+        <Show when={tab() === 'oidc'} fallback={<BackupPanel />}>
           <OidcForm />
         </Show>
       </Show>
