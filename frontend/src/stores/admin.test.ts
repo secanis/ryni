@@ -52,8 +52,28 @@ describe('buildUserRows', () => {
       [{ id: 'a1', email: 'admin@example.com' }],
     );
 
-    expect(rows[0]).toEqual({ id: 'a1', email: 'admin@example.com', name: '', role: 'admin' });
+    expect(rows[0]).toEqual({
+      id: 'a1',
+      email: 'admin@example.com',
+      name: '',
+      role: 'admin',
+      provider: null,
+    });
     expect(rows.slice(1).map((r) => r.role)).toEqual(['user', 'user']);
+  });
+
+  it('marks users whose external auth provider is set as non-local', () => {
+    const rows = buildUserRows(
+      [
+        { id: 'u1', email: 'local@example.com' },
+        { id: 'u2', email: 'sso@example.com' },
+      ],
+      [],
+      new Map([['u2', 'oidc']]),
+    );
+
+    expect(rows.find((r) => r.id === 'u1')?.provider).toBeNull();
+    expect(rows.find((r) => r.id === 'u2')?.provider).toBe('oidc');
   });
 
   it('does not duplicate a user whose email matches an admin', () => {
@@ -68,5 +88,6 @@ describe('buildUserRows', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].role).toBe('admin');
     expect(rows[1].email).toBe('b@example.com');
+    expect(rows[1].provider).toBeNull();
   });
 });

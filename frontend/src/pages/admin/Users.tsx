@@ -21,6 +21,7 @@ export default function Users() {
               <th class="p-3">Email</th>
               <th class="p-3">Name</th>
               <th class="p-3">Role</th>
+              <th class="p-3">Login</th>
               <th class="p-3">Sites</th>
             </tr>
           </thead>
@@ -40,6 +41,13 @@ export default function Users() {
                     >
                       {u.role === 'admin' ? 'Admin' : 'User'}
                     </span>
+                  </td>
+                  <td class="p-3">
+                    <Show when={u.provider} fallback={<span class="text-xs text-muted">Local</span>}>
+                      <span class="inline-block px-2 py-0.5 rounded-radius-pill text-xs font-medium bg-surface-2 text-accent-2">
+                        {u.provider!.toUpperCase()}
+                      </span>
+                    </Show>
                   </td>
                   <td class="p-3">
                     <For each={adminStore.allSites()}>
