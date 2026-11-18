@@ -83,6 +83,42 @@ async function loadSites(): Promise<void> {
   setAllSites(list as unknown as Site[]);
 }
 
+// Superuser-only user management (the `/admin/users` page is gated). The
+// superuser bypasses `users` collection rules, so CRUD happens directly
+// through the SDK. `passwordConfirm` is required by PB whenever `password`
+// is set.
+async function createUser(data: {
+  email: string;
+  name: string;
+  password: string;
+}): Promise<void> {
+  await pb.collection('users').create({
+    email: data.email,
+    name: data.name,
+    password: data.password,
+    passwordConfirm: data.password,
+  });
+  await loadUsers();
+}
+
+async function updateUser(
+  id: string,
+  data: { email: string; name: string },
+): Promise<void> {
+  await pb.collection('users').update(id, data);
+  await loadUsers();
+}
+
+async function resetPassword(id: string, password: string): Promise<void> {
+  await pb.collection('users').update(id, { password, passwordConfirm: password });
+  await loadUsers();
+}
+
+async function deleteUser(id: string): Promise<void> {
+  await pb.collection('users').delete(id);
+  await loadUsers();
+}
+
 // Set (or clear, role=null) a user's role on a site.
 async function setUserSiteRole(
   userId: string,
@@ -107,4 +143,15 @@ function roleOn(userId: string, siteId: string): 'viewer' | 'manager' | null {
   return null;
 }
 
-export const adminStore = { users, allSites, loadUsers, loadSites, setUserSiteRole, roleOn };
+export const adminStore = {
+  users,
+  allSites,
+  loadUsers,
+  loadSites,
+  setUserSiteRole,
+  roleOn,
+  createUser,
+  updateUser,
+  resetPassword,
+  deleteUser,
+};

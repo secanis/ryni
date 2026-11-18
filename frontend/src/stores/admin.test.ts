@@ -4,12 +4,20 @@ const mock = vi.hoisted(() => ({
   getOne: vi.fn(),
   update: vi.fn(),
   getFullList: vi.fn(),
+  create: vi.fn(),
+  delete: vi.fn(),
 }));
 
 vi.mock('~/services/pocketbase', () => ({
   pb: {
     authStore: { model: { id: 'admin1' } },
-    collection: () => ({ getOne: mock.getOne, update: mock.update, getFullList: mock.getFullList }),
+    collection: () => ({
+      getOne: mock.getOne,
+      update: mock.update,
+      getFullList: mock.getFullList,
+      create: mock.create,
+      delete: mock.delete,
+    }),
   },
 }));
 
@@ -39,6 +47,47 @@ describe('admin store', () => {
     await adminStore.setUserSiteRole('user1', 'site1', null);
 
     expect(mock.update).toHaveBeenCalledWith('site1', { managers: [], viewers: [] });
+  });
+
+  it('createUser sends email/name/password + passwordConfirm and reloads', async () => {
+    mock.getFullList.mockResolvedValue([]);
+    mock.create.mockResolvedValueOnce({});
+
+    await adminStore.createUser({ email: 'a@b.c', name: 'A', password: 'pw' });
+
+    expect(mock.create).toHaveBeenCalledWith({
+      email: 'a@b.c',
+      name: 'A',
+      password: 'pw',
+      passwordConfirm: 'pw',
+    });
+  });
+
+  it('updateUser sends email/name only', async () => {
+    mock.getFullList.mockResolvedValue([]);
+    mock.update.mockResolvedValueOnce({});
+
+    await adminStore.updateUser('u1', { email: 'x@y.z', name: 'X' });
+
+    expect(mock.update).toHaveBeenCalledWith('u1', { email: 'x@y.z', name: 'X' });
+  });
+
+  it('resetPassword sends password + passwordConfirm', async () => {
+    mock.getFullList.mockResolvedValue([]);
+    mock.update.mockResolvedValueOnce({});
+
+    await adminStore.resetPassword('u1', 'newpw');
+
+    expect(mock.update).toHaveBeenCalledWith('u1', { password: 'newpw', passwordConfirm: 'newpw' });
+  });
+
+  it('deleteUser calls delete', async () => {
+    mock.getFullList.mockResolvedValue([]);
+    mock.delete.mockResolvedValueOnce(true);
+
+    await adminStore.deleteUser('u1');
+
+    expect(mock.delete).toHaveBeenCalledWith('u1');
   });
 });
 
