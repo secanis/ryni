@@ -77,14 +77,35 @@ describe('UserDialog (add)', () => {
   });
 
   it('surfaces a duplicate-email error instead of crashing', async () => {
-    mock.createUser.mockRejectedValueOnce(new Error('Email already exists'));
+    mock.createUser.mockRejectedValueOnce({
+      message: 'Failed to create record.',
+      response: {
+        data: { email: { code: 'validation_invalid_email', message: 'The email is invalid or already in use.' } },
+      },
+    });
     const host = mount({ mode: 'add' });
 
     clickText(host, 'Create user');
 
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('Email already exists');
+      expect(host.textContent).toContain('The email is invalid or already in use.');
     });
+  });
+
+  it('shows the password actually submitted, even if regenerated mid-request', async () => {
+    let resolveCreate!: (v: void) => void;
+    mock.createUser.mockReturnValueOnce(new Promise<void>((res) => { resolveCreate = res; }));
+    const host = mount({ mode: 'add' });
+
+    const original = (host.querySelector('input[readonly]') as HTMLInputElement).value;
+
+    clickText(host, 'Create user');
+    // Regenerate while the create request is still in flight.
+    (host.querySelector('[aria-label="Regenerate password"]') as HTMLElement).click();
+    resolveCreate();
+
+    await vi.waitFor(() => expect(host.textContent).toContain("won't be shown again"));
+    expect(host.textContent).toContain(original);
   });
 });
 

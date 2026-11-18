@@ -2,6 +2,7 @@ import { createSignal, Show } from 'solid-js';
 import { RefreshCw, X } from 'lucide-solid';
 import { adminStore } from '~/stores/admin';
 import { generatePassword } from '~/utils/password';
+import { pbErrorMessage } from '~/utils/pbError';
 import CopyButton from '~/components/ui/CopyButton';
 import type { UserRow } from '~/stores/admin';
 
@@ -19,10 +20,13 @@ export default function ResetPasswordDialog(props: { user: UserRow; onClose: () 
     setBusy(true);
     setError('');
     try {
-      await adminStore.resetPassword(props.user.id, password());
-      setDone(password());
+      // Capture once — Regenerate can change password() mid-request, and the
+      // confirmation must show what was actually set.
+      const pw = password();
+      await adminStore.resetPassword(props.user.id, pw);
+      setDone(pw);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password');
+      setError(pbErrorMessage(err, 'Failed to reset password'));
     } finally {
       setBusy(false);
     }

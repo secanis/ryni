@@ -3,7 +3,9 @@
 // Alphabet is deliberately unambiguous: no 0/O, 1/l/I, so a generated
 // password survives copy-paste and handwriting without confusion.
 
-const ALPHABET = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ALPHABET = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+export { ALPHABET };
 
 export function generatePassword(length = 16): string {
   const bytes = crypto.getRandomValues(new Uint32Array(length));

@@ -2,6 +2,7 @@ import { createSignal, Show, untrack } from 'solid-js';
 import { RefreshCw, X } from 'lucide-solid';
 import { adminStore } from '~/stores/admin';
 import { generatePassword } from '~/utils/password';
+import { pbErrorMessage } from '~/utils/pbError';
 import CopyButton from '~/components/ui/CopyButton';
 import type { UserRow } from '~/stores/admin';
 
@@ -30,12 +31,15 @@ export default function UserDialog(props: {
     setError('');
     try {
       if (isAdd()) {
+        // Capture once — Regenerate can change password() while the request
+        // is in flight, and the confirmation must show what was actually sent.
+        const pw = password();
         await adminStore.createUser({
           email: email().trim(),
           name: name().trim(),
-          password: password(),
+          password: pw,
         });
-        setCreated(password());
+        setCreated(pw);
       } else {
         await adminStore.updateUser(props.user!.id, {
           email: email().trim(),
@@ -44,7 +48,7 @@ export default function UserDialog(props: {
         props.onClose();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save user');
+      setError(pbErrorMessage(err, 'Failed to save user'));
     } finally {
       setBusy(false);
     }

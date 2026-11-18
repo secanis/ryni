@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { generatePassword } from './password';
+import { generatePassword, ALPHABET } from './password';
 
 const AMBIGUOUS = /[0O1lI]/;
 
 describe('generatePassword', () => {
+  it('uses the full unambiguous alphabet (lowercase minus l, uppercase minus I/O, digits 2-9)', () => {
+    expect(ALPHABET).toBe('abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789');
+  });
+
   it('returns a string of the requested length', () => {
     expect(generatePassword(16)).toHaveLength(16);
     expect(generatePassword(24)).toHaveLength(24);
