@@ -50,6 +50,7 @@ export default function Setup() {
           <input
             id="email"
             type="email"
+            autocomplete="username"
             value={email()}
             onInput={(e) => setEmail(e.currentTarget.value)}
             class="w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2"
@@ -63,6 +64,7 @@ export default function Setup() {
           <input
             id="password"
             type="password"
+            autocomplete="new-password"
             minLength={8}
             value={password()}
             onInput={(e) => setPassword(e.currentTarget.value)}

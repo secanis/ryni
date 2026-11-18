@@ -37,6 +37,7 @@ export default function Login() {
           <input
             id="email"
             type="email"
+            autocomplete="username"
             value={email()}
             onInput={(e) => setEmail(e.currentTarget.value)}
             class="w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2"
@@ -50,6 +51,7 @@ export default function Login() {
           <input
             id="password"
             type="password"
+            autocomplete="current-password"
             value={password()}
             onInput={(e) => setPassword(e.currentTarget.value)}
             class="w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2"

@@ -1,5 +1,7 @@
 import { createSignal, For, onMount, Show } from 'solid-js';
+import { Download, Trash2 } from 'lucide-solid';
 import { pb } from '~/services/pocketbase';
+import { backupDownloadUrl } from '~/utils/backupDownloadUrl';
 import { backupName } from '~/utils/backupName';
 
 interface BackupInfo {
@@ -51,7 +53,7 @@ export default function BackupPanel() {
     try {
       // Fetch the backup with the token in the Authorization header — never
       // the query string, which would leak into logs/browser history/Referer.
-      const res = await fetch(`${pb.baseUrl}/api/backups/${encodeURIComponent(key)}`, {
+      const res = await fetch(backupDownloadUrl(key), {
         headers: { Authorization: pb.authStore.token },
       });
       if (!res.ok) {
@@ -105,12 +107,22 @@ export default function BackupPanel() {
                     {sizeLabel(b.size)} · {b.modified}
                   </div>
                 </div>
-                <div class="flex gap-3">
-                  <button onClick={() => void download(b.key)} class="text-sm underline">
-                    Download
+                <div class="flex items-center gap-4">
+                  <button
+                    onClick={() => void download(b.key)}
+                    aria-label={`Download ${b.key}`}
+                    title="Download"
+                    class="text-muted hover:text-text transition-colors"
+                  >
+                    <Download size={16} />
                   </button>
-                  <button onClick={() => void remove(b.key)} class="text-sm underline text-danger">
-                    Delete
+                  <button
+                    onClick={() => void remove(b.key)}
+                    aria-label={`Delete ${b.key}`}
+                    title="Delete"
+                    class="text-danger hover:opacity-70 transition-opacity"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </li>
