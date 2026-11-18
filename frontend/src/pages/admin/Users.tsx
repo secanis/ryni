@@ -1,8 +1,15 @@
-import { For, onMount, Show } from 'solid-js';
+import { createSignal, For, onMount, Show } from 'solid-js';
+import { KeyRound, Pencil, Trash2, UserPlus } from 'lucide-solid';
 import { auth } from '~/stores/auth';
-import { adminStore } from '~/stores/admin';
+import { adminStore, type UserRow } from '~/stores/admin';
+import UserDialog from '~/components/admin/UserDialog';
+import ResetPasswordDialog from '~/components/admin/ResetPasswordDialog';
 
 export default function Users() {
+  const [showAdd, setShowAdd] = createSignal(false);
+  const [editing, setEditing] = createSignal<UserRow | null>(null);
+  const [resetting, setResetting] = createSignal<UserRow | null>(null);
+
   onMount(() => {
     if (auth.isSuperuser()) {
       void adminStore.loadUsers();
@@ -10,9 +17,29 @@ export default function Users() {
     }
   });
 
+  // Only local (password) users are manageable here — OIDC users are governed
+  // by their IdP, and the admin row lives in `_superusers`.
+  const isLocal = (u: UserRow) => u.role === 'user' && u.provider === null;
+
+  function remove(u: UserRow) {
+    if (!window.confirm(`Delete user "${u.email}"? This cannot be undone.`)) return;
+    void adminStore.deleteUser(u.id);
+  }
+
   return (
     <div class="space-y-6">
-      <h1 class="text-2xl font-semibold">Users</h1>
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold">Users</h1>
+        <Show when={auth.isSuperuser()}>
+          <button
+            onClick={() => setShowAdd(true)}
+            class="inline-flex items-center gap-1.5 bg-accent text-accent-fg rounded-radius-sm px-4 py-2 text-sm"
+          >
+            <UserPlus size={15} />
+            Add user
+          </button>
+        </Show>
+      </div>
 
       <Show when={auth.isSuperuser()} fallback={<p class="text-muted">Admin only.</p>}>
         <table class="w-full text-sm bg-surface rounded-radius-card border border-border">
@@ -23,6 +50,7 @@ export default function Users() {
               <th class="p-3">Role</th>
               <th class="p-3">Login</th>
               <th class="p-3">Sites</th>
+              <th class="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -63,11 +91,51 @@ export default function Users() {
                       }}
                     </For>
                   </td>
+                  <td class="p-3">
+                    <Show when={isLocal(u)}>
+                      <div class="flex items-center gap-3">
+                        <button
+                          onClick={() => setEditing(u)}
+                          aria-label={`Edit ${u.email}`}
+                          title="Edit"
+                          class="text-muted hover:text-text transition-colors"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => setResetting(u)}
+                          aria-label={`Reset password for ${u.email}`}
+                          title="Reset password"
+                          class="text-muted hover:text-text transition-colors"
+                        >
+                          <KeyRound size={15} />
+                        </button>
+                        <button
+                          onClick={() => remove(u)}
+                          aria-label={`Delete ${u.email}`}
+                          title="Delete"
+                          class="text-danger hover:opacity-70 transition-opacity"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </Show>
+                  </td>
                 </tr>
               )}
             </For>
           </tbody>
         </table>
+      </Show>
+
+      <Show when={showAdd()}>
+        <UserDialog mode="add" onClose={() => setShowAdd(false)} />
+      </Show>
+      <Show when={editing()}>
+        <UserDialog mode="edit" user={editing()!} onClose={() => setEditing(null)} />
+      </Show>
+      <Show when={resetting()}>
+        <ResetPasswordDialog user={resetting()!} onClose={() => setResetting(null)} />
       </Show>
     </div>
   );
