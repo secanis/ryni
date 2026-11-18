@@ -1,5 +1,6 @@
 import { createSignal, untrack } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
+import { Trash2 } from 'lucide-solid';
 import { sitesStore } from '~/stores/sites';
 import Snippet from '~/components/sites/Snippet';
 import CopyButton from '~/components/ui/CopyButton';
@@ -126,7 +127,11 @@ export default function SiteSettingsDialog(props: {
         {error() && <p class="text-danger text-sm">{error()}</p>}
 
         <div class="flex items-center justify-between pt-2">
-          <button onClick={() => void remove()} class="text-sm text-danger underline">
+          <button
+            onClick={() => void remove()}
+            class="inline-flex items-center gap-1.5 text-sm text-danger hover:opacity-70 transition-opacity"
+          >
+            <Trash2 size={15} />
             Delete site
           </button>
           <div class="flex gap-2">

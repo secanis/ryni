@@ -1,5 +1,6 @@
 import { createSignal } from 'solid-js';
 import { pb } from '~/services/pocketbase';
+import CopyButton from '~/components/ui/CopyButton';
 
 // OIDC / SSO configuration form (superuser only — gated by the parent
 // Settings page). Registers the "oidc" provider on the `users` collection
@@ -42,9 +43,19 @@ export default function OidcForm() {
   }
 
   const field = 'w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2';
+  // The redirect URI the identity provider must allow. PocketBase's OAuth2
+  // flow returns to this exact path (the SDK opens the popup with it).
+  const callbackUrl = () => pb.buildURL('/api/oauth2-redirect');
 
   return (
     <form onSubmit={onSubmit} class="space-y-4 max-w-md">
+      <div class="rounded-radius-sm border border-border bg-surface-2 p-3 text-xs">
+        <p class="mb-1.5 text-muted">Redirect / callback URL to add in your identity provider:</p>
+        <div class="flex items-center gap-2">
+          <code class="font-mono text-text break-all">{callbackUrl()}</code>
+          <CopyButton text={callbackUrl()} label="Copy callback URL" />
+        </div>
+      </div>
       <div>
         <label class="block text-sm mb-1">Display name</label>
         <input value={displayName()} onInput={(e) => setDisplayName(e.currentTarget.value)} class={field} />
@@ -57,6 +68,7 @@ export default function OidcForm() {
         <label class="block text-sm mb-1">Client secret</label>
         <input
           type="password"
+          autocomplete="off"
           value={clientSecret()}
           onInput={(e) => setClientSecret(e.currentTarget.value)}
           class={field}
