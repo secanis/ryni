@@ -1,5 +1,18 @@
-# Stage 1: Build
-FROM docker.io/node:24-alpine AS builder
+# Buildkit auto-injects these from the `platforms:` list in release.yml.
+# BUILDPLATFORM is the runner's native arch (always linux/amd64); TARGETPLATFORM
+# is the arch of the image leg being produced (amd64 or arm64).
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+
+# Stage 1: Build.
+#
+# Pinned to BUILDPLATFORM (amd64) so the node toolchain — `npm ci`, tsc,
+# esbuild and `vite build` — always runs NATIVELY and exactly once. The JS
+# bundle in dist/ is arch-independent, so there is nothing to gain from
+# running it per-target; before this pin the arm64 leg ran the whole build
+# under QEMU user-mode emulation, which stretched this single step to ~15
+# minutes (the release that shipped v0.0.2 hit 25+ and counting).
+FROM --platform=$BUILDPLATFORM docker.io/node:24-alpine AS builder
 
 # Build metadata stamped into the bundle (see vite.config.ts). The Docker
 # context is frontend/, so there is no .git for the git-describe fallback;
@@ -15,8 +28,10 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve with nginx-unprivileged (non-root, port 8080)
-FROM docker.io/nginxinc/nginx-unprivileged:1.31-alpine
+# Stage 2: Serve with nginx-unprivileged (non-root, port 8080). Built for the
+# target platform so amd64 and arm64 users each get a native base image; the
+# arch-independent dist/ is copied straight in from the builder.
+FROM --platform=$TARGETPLATFORM docker.io/nginxinc/nginx-unprivileged:1.31-alpine
 
 # The base image lags behind Alpine's security point releases, and Artifact
 # Hub/Trivy scans the published image (critical + high CVEs in brotli, curl,
