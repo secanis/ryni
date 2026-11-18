@@ -7,7 +7,7 @@ type Tab = 'oidc' | 'backup';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'oidc', label: 'OIDC / SSO' },
-  { id: 'backup', label: 'Backup' },
+  { id: 'backup', label: 'Backup / Restore' },
 ];
 
 export default function Settings() {
