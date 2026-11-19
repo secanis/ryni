@@ -10,7 +10,7 @@ frontend served by nginx.
 
 ```bash
 # From the Helm repo (index.yaml published to gh-pages on release):
-helm repo add ryni https://secanis.github.io/ryni/
+helm repo add ryni https://ryni.secanis.ch/
 helm repo update
 helm install ryni ryni/ryni \
   --set ingress.hosts[0].host=analytics.example.com \
