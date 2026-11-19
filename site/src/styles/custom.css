@@ -1,0 +1,78 @@
+/* RÝNI design language, ported onto Starlight's CSS custom properties.
+   Tokens mirror frontend/src/index.css (see docs/superpowers/specs/
+   2026-11-16-ryni-design-language.md). Dark = "Polar Night", light = "Glacier".
+   Unlayered rules override Starlight's @layer defaults. */
+
+/* Self-hosted fonts (bundled woff2 via @fontsource — no external requests). */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/sora/600.css";
+@import "@fontsource/sora/700.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
+/* ---- Dark: Polar Night (Starlight's `:root` is the dark theme) ---- */
+:root {
+  --sl-color-bg: #0d1120;
+  --sl-color-bg-nav: #151a2d;
+  --sl-color-bg-sidebar: #0d1120;
+  --sl-color-bg-inline-code: #1c2339;
+
+  --sl-color-text: #e8ecf6;
+  --sl-color-gray-1: #e8ecf6; /* headings */
+  --sl-color-gray-2: #e8ecf6; /* body */
+  --sl-color-gray-3: #98a0ba; /* muted */
+  --sl-color-gray-4: #6b7390; /* faint */
+  --sl-color-gray-5: #333b58; /* border-strong */
+  --sl-color-gray-6: #262d45; /* border */
+  --sl-color-gray-7: #1c2339; /* surface-2 */
+
+  --sl-color-accent: #4ee6a8;
+  --sl-color-accent-high: #8bf0c8;
+  --sl-color-accent-low: #10382b;
+  --sl-color-text-accent: #4ee6a8;
+  --sl-color-text-invert: #0d1120; /* accent-fg */
+  --sl-color-bg-accent: #4ee6a8;
+}
+
+/* ---- Light: Glacier ---- */
+:root[data-theme="light"],
+[data-theme="light"] ::backdrop {
+  --sl-color-bg: #f3f5fb;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #f3f5fb;
+  --sl-color-bg-inline-code: #eef1f8;
+
+  --sl-color-text: #171c2e;
+  --sl-color-gray-1: #171c2e; /* headings */
+  --sl-color-gray-2: #171c2e; /* body */
+  --sl-color-gray-3: #64708c; /* muted */
+  --sl-color-gray-4: #96a0b8; /* faint */
+  --sl-color-gray-5: #cbd3e2; /* border-strong */
+  --sl-color-gray-6: #e1e6f0; /* border */
+  --sl-color-gray-7: #eef1f8; /* surface-2 */
+
+  --sl-color-accent: #0ba477;
+  --sl-color-accent-high: #089266;
+  --sl-color-accent-low: #d6f3e7;
+  --sl-color-text-accent: #0ba477;
+  --sl-color-text-invert: #0d1120; /* accent-fg */
+  --sl-color-bg-accent: #0ba477;
+}
+
+/* Typography: Sora for display, Inter for body, JetBrains Mono for data/code. */
+:root {
+  --sl-font: "Inter", system-ui, sans-serif;
+  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Sora", "Inter", system-ui, sans-serif;
+}

@@ -41,18 +41,11 @@ Create a site in the dashboard (Sites → Add site). You'll get two snippets.
         data-ryni-site="<tracking_id>"></script>
 ```
 
-Set the site's **allowed origins** to your website's origin so the
-cross-origin request is accepted.
-
 **Variant B — proxy** (script + requests stay on your own origin):
 
 ```html
 <script async src="/ryni.js" data-ryni-site="<tracking_id>"></script>
 ```
-
-You must serve `/ryni.js` and forward `/t/` to Rýni from your own server.
-See [`docs/variant-b-proxy.md`](docs/variant-b-proxy.md) for nginx and
-framework examples.
 
 Add `data-ryni-detailed` to re-fire on single-page-app route changes.
 
@@ -70,78 +63,11 @@ Add `data-ryni-detailed` to re-fire on single-page-app route changes.
 - Scheduled + manual backups.
 - No cookies, no raw IP storage, honors Do Not Track.
 
-## Environment
+## Documentation
 
-| Variable | Purpose |
-|----------|---------|
-| `PB_SECRET` | Encryption key (exactly 32 ASCII chars) |
-| `PB_SUPERUSER_EMAIL` / `PB_SUPERUSER_PASSWORD` | First global admin (created on first boot) |
-| `PB_AUTOMIGRATE` | Run migrations on start (default `true`) |
-| `PB_SUPERUSER_IPS` | Superuser IP allowlist |
-| `RYNI_BACKUP_INTERVAL` | Cron expression for scheduled backups (empty = off) |
-
-## Kubernetes / Helm
-
-A Helm chart lives in [`helm/ryni`](helm/ryni) (single-replica PocketBase +
-nginx-served frontend, Traefik/cert-manager Ingress, NetworkPolicies, and
-data-safe Secrets/PVC with `resource-policy: keep`).
-
-```bash
-helm repo add ryni https://secanis.github.io/ryni/
-helm repo update
-helm install ryni ryni/ryni \
-  --set ingress.hosts[0].host=analytics.example.com \
-  --set pocketbase.persistence.storageClass=longhorn
-```
-
-Fetch the auto-generated superuser credentials after install:
-
-```bash
-kubectl get secret -n ryni ryni-pocketbase-superuser \
-  -o jsonpath='{.data.PB_SUPERUSER_EMAIL}' | base64 -d; echo
-kubectl get secret -n ryni ryni-pocketbase-superuser \
-  -o jsonpath='{.data.PB_SUPERUSER_PASSWORD}' | base64 -d; echo
-```
-
-See [`helm/ryni/README.md`](helm/ryni/README.md) for the full parameter list
-and data-safety notes.
-
-## CI / CD
-
-- **CI** (`.github/workflows/ci.yml`) — frontend lint/typecheck/build/unit
-  tests, PocketBase integration tests, and `helm lint` + template render.
-- **CD** (`.github/workflows/release.yml`) — on a `v*` tag: runs CI, builds
-  multi-arch (amd64/arm64) images to Docker Hub, packages the chart, attaches
-  it to the release, updates the Helm repo `index.yaml` on `gh-pages`, and
-  publishes the minimal landing page (`site/`) to `https://secanis.github.io/ryni/`.
-
-```bash
-# Local chart checks
-make lint-helm        # helm lint + render
-make test-helm        # full kind-based end-to-end test
-```
-
-## Development
-
-```bash
-# Frontend (SolidJS + Vite)
-cd frontend && npm install && npm run dev
-
-# Backend integration tests (needs podman/docker; binds 8091)
-cd pocketbase && npm install && npm test
-```
-
-## Project structure
-
-```
-.
-├── frontend/         # SolidJS frontend + tracker script (src/tracker/)
-├── pocketbase/       # PocketBase backend: pb_migrations/, pb_hooks/, tests/
-├── helm/ryni/        # Helm chart
-├── scripts/          # Helm chart test rig (test-helm.sh)
-├── docker-compose.yml
-└── .github/workflows/ # ci.yml + release.yml
-```
+Full operator docs — configuration, environment variables, Helm, the Variant B
+proxy setup, SSO and backups, and development — live at
+<https://ryni.secanis.ch/docs/>.
 
 ## License
 

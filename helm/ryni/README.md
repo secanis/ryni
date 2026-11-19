@@ -6,11 +6,13 @@ frontend served by nginx.
 - **No cookies**, honors Do Not Track, no raw IP logging.
 - Two tracking variants: direct (CORS-gated) and same-origin proxy.
 
+> The web docs mirror this file at <https://ryni.secanis.ch/docs/helm/>. Keep the two in sync.
+
 ## Install
 
 ```bash
 # From the Helm repo (index.yaml published to gh-pages on release):
-helm repo add ryni https://secanis.github.io/ryni/
+helm repo add ryni https://ryni.secanis.ch/
 helm repo update
 helm install ryni ryni/ryni \
   --set ingress.hosts[0].host=analytics.example.com \
