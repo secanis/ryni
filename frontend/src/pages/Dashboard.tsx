@@ -1,5 +1,6 @@
 import { createEffect, createSignal, For, Show } from 'solid-js';
 import { useParams } from '@solidjs/router';
+import { Pencil, Share2 } from 'lucide-solid';
 import { statsStore } from '~/stores/stats';
 import { sitesStore } from '~/stores/sites';
 import type { Site, SiteMembers } from '~/types';
@@ -81,14 +82,16 @@ export default function Dashboard() {
         <div class="flex items-center gap-3">
           <button
             onClick={() => setShareOpen(true)}
-            class="px-3 py-1 rounded-radius-sm text-sm border border-border"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-radius-sm text-sm border border-border"
           >
+            <Share2 size={15} />
             Share
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
-            class="px-3 py-1 rounded-radius-sm text-sm border border-border"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-radius-sm text-sm border border-border"
           >
+            <Pencil size={15} />
             Edit
           </button>
           <DateRange selected={selected()} onChange={onRange} />
