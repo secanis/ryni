@@ -4,6 +4,7 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+	site: 'https://ryni.secanis.ch/',
 	integrations: [
 		starlight({
 			title: 'RÝNI',
@@ -25,15 +26,16 @@ export default defineConfig({
 			],
 			sidebar: [
 				{
-					label: 'Guides',
+					label: 'Docs',
 					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
+						{ label: 'Overview', slug: 'docs' },
+						{ label: 'Quick start', slug: 'docs/quickstart' },
+						{ label: 'Tracking a website', slug: 'docs/tracking' },
+						{ label: 'Configuration', slug: 'docs/configuration' },
+						{ label: 'Helm', slug: 'docs/helm' },
+						{ label: 'SSO & backups', slug: 'docs/sso-and-backups' },
+						{ label: 'Development', slug: 'docs/development' },
 					],
-				},
-				{
-					label: 'Reference',
-					items: [{ autogenerate: { directory: 'reference' } }],
 				},
 			],
 		}),
