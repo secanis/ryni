@@ -3,6 +3,7 @@ import { useNavigate } from '@solidjs/router';
 import { Trash2 } from 'lucide-solid';
 import { sitesStore } from '~/stores/sites';
 import Snippet from '~/components/sites/Snippet';
+import CampaignLinks from '~/components/sites/CampaignLinks';
 import CopyButton from '~/components/ui/CopyButton';
 import type { Site } from '~/types';
 
@@ -122,6 +123,10 @@ export default function SiteSettingsDialog(props: {
         <div class="border-t border-border pt-4">
           <h3 class="font-medium mb-3">Tracking code</h3>
           <Snippet input={{ server: server(), site: props.site.tracking_id, detailed: false }} />
+        </div>
+
+        <div class="border-t border-border pt-4">
+          <CampaignLinks baseUrl={props.site.allowed_origins?.[0] ?? ''} />
         </div>
 
         {error() && <p class="text-danger text-sm">{error()}</p>}
