@@ -1,0 +1,324 @@
+---
+import '../styles/custom.css';
+
+const version = import.meta.env.PUBLIC_CHART_VERSION;
+
+const quickstart = `cp .env.example .env
+# Edit .env to set PB_SECRET (32 chars: \`openssl rand -hex 16\`) and
+# PB_SUPERUSER_EMAIL / PB_SUPERUSER_PASSWORD.
+
+docker compose up -d
+
+# Dashboard:  http://localhost:3000
+# Sign in with PB_SUPERUSER_EMAIL / PB_SUPERUSER_PASSWORD (the global admin).`;
+
+const helmInstall = [
+  'helm repo add ryni https://ryni.secanis.ch/',
+  'helm repo update',
+  'helm install ryni ryni/ryni',
+  version ? `  --version ${version}` : null,
+  '  --set ingress.hosts[0].host=analytics.example.com',
+  '  --set pocketbase.persistence.storageClass=longhorn',
+]
+  .filter(Boolean)
+  .join('\n');
+
+const variantA = `<script async src="https://ryni.example/ryni.js"
+        data-ryni-server="https://ryni.example"
+        data-ryni-site="<tracking_id>"><\/script>`;
+
+const variantB = `<script async src="/ryni.js" data-ryni-site="<tracking_id>"><\/script>`;
+
+const features = [
+  {
+    title: 'Per-site dashboards',
+    body: 'Views, unique visitors, average duration, bounce rate, live visitors, time-series, and referrer / browser / OS / device / screen / page breakdowns.',
+  },
+  {
+    title: 'Two tracking modes',
+    body: 'A direct script, or a same-origin proxy that adblockers can’t block. Both driven by the same client script.',
+  },
+  {
+    title: 'Per-site roles',
+    body: 'Viewer (read) and manager (read, configure, share, delete). Any user can create a site and becomes its manager.',
+  },
+  {
+    title: 'SSO & backups',
+    body: 'One global admin with OIDC/SSO, user management, and scheduled + manual backups.',
+  },
+  {
+    title: 'Privacy by design',
+    body: 'No cookies, no raw IP storage, honors Do Not Track. Self-hosted, so the data stays yours.',
+  },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RÝNI — privacy-preserving web analytics</title>
+    <meta
+      name="description"
+      content="Self-hosted, privacy-preserving web analytics. No cookies, no fingerprinting, respects Do Not Track."
+    />
+    <script is:inline>
+      (() => {
+        if (!localStorage.getItem('starlight-theme')) {
+          localStorage.setItem('starlight-theme', 'dark');
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
+    <style is:global>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--sl-color-bg);
+        color: var(--sl-color-text);
+        font-family: var(--sl-font);
+        line-height: 1.6;
+      }
+      a {
+        color: var(--sl-color-accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .shell {
+        max-width: 60rem;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.25rem 0;
+        border-bottom: 1px solid var(--sl-color-gray-6);
+      }
+      .wordmark {
+        font-family: 'Sora', sans-serif;
+        font-weight: 700;
+        font-size: 1.25rem;
+        letter-spacing: 0.02em;
+        color: var(--sl-color-text);
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.05em;
+      }
+      .wordmark .dot {
+        color: var(--sl-color-accent);
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+      }
+      nav a {
+        color: var(--sl-color-gray-3);
+        font-weight: 500;
+      }
+      nav a:hover {
+        color: var(--sl-color-text);
+      }
+      .theme-toggle {
+        background: none;
+        border: 1px solid var(--sl-color-gray-5);
+        color: var(--sl-color-gray-3);
+        border-radius: 8px;
+        padding: 0.3rem 0.7rem;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.85rem;
+      }
+      .hero {
+        padding: 4rem 0 3rem;
+      }
+      .hero h1 {
+        margin: 0 0 0.5rem;
+        font-family: 'Sora', sans-serif;
+        font-size: clamp(2.5rem, 6vw, 3.75rem);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        background: linear-gradient(
+          90deg,
+          var(--sl-color-accent),
+          var(--sl-color-accent-3, #a58bff)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .tagline {
+        margin: 0 0 2rem;
+        color: var(--sl-color-gray-3);
+        font-size: 1.15rem;
+        max-width: 40rem;
+      }
+      .cta {
+        display: inline-block;
+        background: var(--sl-color-accent);
+        color: var(--sl-color-text-invert);
+        font-weight: 600;
+        padding: 0.6rem 1.3rem;
+        border-radius: 8px;
+      }
+      .cta:hover {
+        text-decoration: none;
+        opacity: 0.9;
+      }
+      .cta-secondary {
+        display: inline-block;
+        border: 1px solid var(--sl-color-gray-5);
+        color: var(--sl-color-text);
+        font-weight: 600;
+        padding: 0.6rem 1.3rem;
+        border-radius: 8px;
+        margin-left: 0.75rem;
+      }
+      section {
+        padding: 1.5rem 0;
+      }
+      h2 {
+        font-family: 'Sora', sans-serif;
+        font-size: 1.5rem;
+        letter-spacing: -0.01em;
+        margin: 0 0 1rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+        gap: 1rem;
+      }
+      .card {
+        background: var(--sl-color-bg-nav);
+        border: 1px solid var(--sl-color-gray-6);
+        border-radius: 12px;
+        padding: 1.25rem;
+      }
+      .card h3 {
+        font-family: 'Sora', sans-serif;
+        font-size: 1.05rem;
+        margin: 0 0 0.5rem;
+      }
+      .card p {
+        margin: 0;
+        color: var(--sl-color-gray-3);
+        font-size: 0.95rem;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        line-height: 1.7;
+        margin: 0;
+      }
+      code {
+        font-family: var(--sl-font-mono);
+      }
+      .snippet-label {
+        font-weight: 600;
+        margin: 1.25rem 0 0.5rem;
+        color: var(--sl-color-gray-3);
+        font-size: 0.9rem;
+      }
+      footer {
+        margin-top: 2rem;
+        padding: 1.5rem 0 3rem;
+        border-top: 1px solid var(--sl-color-gray-6);
+        color: var(--sl-color-gray-4);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <a class="wordmark" href="/">RÝNI<span class="dot">.</span></a>
+        <nav>
+          <a href="/docs/">Docs</a>
+          <a href="https://github.com/secanis/ryni">GitHub</a>
+          <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+            <span data-theme-label>light</span>
+          </button>
+        </nav>
+      </header>
+
+      <div class="hero">
+        <h1>RÝNI</h1>
+        <p class="tagline">
+          Self-hosted, privacy-preserving web analytics — no cookies, no
+          fingerprinting, respects Do Not Track.
+        </p>
+        <a class="cta" href="/docs/">Read the docs</a>
+        <a class="cta-secondary" href="https://github.com/secanis/ryni">GitHub</a>
+      </div>
+
+      <section>
+        <h2>Features</h2>
+        <div class="grid">
+          {features.map((f) => (
+            <div class="card">
+              <h3>{f.title}</h3>
+              <p>{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2>Install</h2>
+        <p class="snippet-label">Docker Compose</p>
+        <pre><code>{quickstart}</code></pre>
+
+        <p class="snippet-label">Helm</p>
+        <pre><code>{helmInstall}</code></pre>
+      </section>
+
+      <section>
+        <h2>Tracking a website</h2>
+        <p class="snippet-label">Variant A — direct</p>
+        <pre><code>{variantA}</code></pre>
+        <p class="snippet-label">Variant B — same-origin proxy</p>
+        <pre><code>{variantB}</code></pre>
+        <p style="color: var(--sl-color-gray-3); font-size: 0.9rem">
+          Full setup, configuration, Helm values and SSO: see the
+          <a href="/docs/">documentation</a>.
+        </p>
+      </section>
+
+      <footer>
+        RÝNI is licensed under the GNU AGPL v3.0 or later. ·
+        <a href="https://artifacthub.io/packages/helm/ryni/ryni">Artifact Hub</a>
+        ·
+        <a href="https://hub.docker.com/r/secanis/ryni-frontend">Docker Hub</a>
+      </footer>
+    </div>
+
+    <script>
+      const toggle = document.getElementById('theme-toggle');
+      const label = toggle.querySelector('[data-theme-label]');
+      const syncLabel = () => {
+        const theme = document.documentElement.dataset.theme;
+        label.textContent = theme === 'light' ? 'dark' : 'light';
+      };
+      toggle.addEventListener('click', () => {
+        const next =
+          document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('starlight-theme', next);
+        syncLabel();
+      });
+      syncLabel();
+    </script>
+  </body>
+</html>
