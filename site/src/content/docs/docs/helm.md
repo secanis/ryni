@@ -8,6 +8,10 @@ single-replica PocketBase + nginx-served frontend, Traefik/cert-manager
 Ingress, NetworkPolicies, and data-safe Secrets/PVC with
 `resource-policy: keep`.
 
+> This page mirrors the chart's own README
+> ([`helm/ryni/README.md`](https://github.com/secanis/ryni/blob/main/helm/ryni/README.md)).
+> The two are kept in sync by hand — update both when the chart changes.
+
 ## Install
 
 From the Helm repo (published to `https://ryni.secanis.ch/` on release):

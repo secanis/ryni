@@ -78,6 +78,12 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Verify landing install snippet
+        run: |
+          PUBLIC_CHART_VERSION="0.0.0-test" npm run build
+          grep -Fq 'ryni/ryni \' dist/index.html
+          grep -Fq -- '--version 0.0.0-test \' dist/index.html
+          ! grep -q '@@CHART_VERSION@@' dist/index.html
 
   # -------------------------------------------------------------------------
   # PocketBase: vitest integration tests (need a running PB)

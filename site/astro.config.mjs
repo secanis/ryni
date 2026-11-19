@@ -17,10 +17,9 @@ export default defineConfig({
 					// dark; an explicit user toggle to light is remembered.
 					tag: 'script',
 					content: `(() => {
-						if (!localStorage.getItem('starlight-theme')) {
-							localStorage.setItem('starlight-theme', 'dark');
-							document.documentElement.dataset.theme = 'dark';
-						}
+						const t = localStorage.getItem('starlight-theme');
+						document.documentElement.dataset.theme = t || 'dark';
+						if (!t) localStorage.setItem('starlight-theme', 'dark');
 					})();`,
 				},
 			],

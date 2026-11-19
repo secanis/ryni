@@ -13,7 +13,7 @@
 # `helm repo add https://ryni.secanis.ch/` keeps working from the same site.
 #
 # Triggers:
-#   - push to main (site/, this workflow, or the helm chart README change)
+#   - push to main (site/ or this workflow changes)
 #   - workflow_dispatch (manual)
 #   - workflow_call (from release.yml after the Helm index has been updated)
 
@@ -24,7 +24,6 @@ on:
     branches: [main]
     paths:
       - 'site/**'
-      - 'helm/ryni/README.md'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
   workflow_call:

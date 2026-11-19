@@ -15,9 +15,9 @@ docker compose up -d
 const helmInstall = [
   'helm repo add ryni https://ryni.secanis.ch/',
   'helm repo update',
-  'helm install ryni ryni/ryni',
-  version ? `  --version ${version}` : null,
-  '  --set ingress.hosts[0].host=analytics.example.com',
+  'helm install ryni ryni/ryni \\',
+  version ? `  --version ${version} \\` : null,
+  '  --set ingress.hosts[0].host=analytics.example.com \\',
   '  --set pocketbase.persistence.storageClass=longhorn',
 ]
   .filter(Boolean)
@@ -65,10 +65,9 @@ const features = [
     />
     <script is:inline>
       (() => {
-        if (!localStorage.getItem('starlight-theme')) {
-          localStorage.setItem('starlight-theme', 'dark');
-          document.documentElement.dataset.theme = 'dark';
-        }
+        const t = localStorage.getItem('starlight-theme');
+        document.documentElement.dataset.theme = t || 'dark';
+        if (!t) localStorage.setItem('starlight-theme', 'dark');
       })();
     </script>
     <style is:global>

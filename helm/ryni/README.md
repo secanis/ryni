@@ -6,6 +6,8 @@ frontend served by nginx.
 - **No cookies**, honors Do Not Track, no raw IP logging.
 - Two tracking variants: direct (CORS-gated) and same-origin proxy.
 
+> The web docs mirror this file at <https://ryni.secanis.ch/docs/helm/>. Keep the two in sync.
+
 ## Install
 
 ```bash
