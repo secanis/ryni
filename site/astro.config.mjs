@@ -8,6 +8,13 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'RÝNI',
+			logo: {
+				dark: './src/assets/logo.png',
+				light: './src/assets/logo-dark.png',
+				alt: 'RÝNI',
+				replacesTitle: true,
+			},
+			favicon: '/favicon.ico',
 			customCss: ['./src/styles/custom.css'],
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/secanis/ryni' }],
 			head: [
