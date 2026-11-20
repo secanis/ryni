@@ -63,6 +63,9 @@ const features = [
       name="description"
       content="Self-hosted, privacy-preserving web analytics. No cookies, no fingerprinting, respects Do Not Track."
     />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script is:inline>
       (() => {
         const t = localStorage.getItem('starlight-theme');
@@ -102,17 +105,20 @@ const features = [
         border-bottom: 1px solid var(--sl-color-gray-6);
       }
       .wordmark {
-        font-family: 'Sora', sans-serif;
-        font-weight: 700;
-        font-size: 1.25rem;
-        letter-spacing: 0.02em;
-        color: var(--sl-color-text);
         display: inline-flex;
-        align-items: baseline;
+        align-items: center;
         gap: 0.05em;
       }
-      .wordmark .dot {
-        color: var(--sl-color-accent);
+      .brand-logo {
+        height: 1.5rem;
+        width: auto;
+        display: block;
+      }
+      html[data-theme='dark'] .brand-logo--dark {
+        display: none;
+      }
+      html[data-theme='light'] .brand-logo--white {
+        display: none;
       }
       nav {
         display: flex;
@@ -242,7 +248,18 @@ const features = [
   <body>
     <div class="shell">
       <header>
-        <a class="wordmark" href="/">RÝNI<span class="dot">.</span></a>
+        <a class="wordmark" href="/" aria-label="RÝNI home">
+          <img
+            class="brand-logo brand-logo--white"
+            src="/logo.png"
+            alt="RÝNI"
+          />
+          <img
+            class="brand-logo brand-logo--dark"
+            src="/logo-dark.png"
+            alt="RÝNI"
+          />
+        </a>
         <nav>
           <a href="/docs/">Docs</a>
           <a href="https://github.com/secanis/ryni">GitHub</a>

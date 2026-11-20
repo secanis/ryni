@@ -9,8 +9,9 @@ export default function Shell(props: ParentProps) {
     <div class="min-h-screen bg-bg">
       <header class="flex items-center justify-between px-6 py-3 border-b border-border">
         <div class="flex items-center gap-6">
-          <a href="/" class="font-display font-semibold text-lg text-text">
-            RÝNI<span class="text-accent">.</span>
+          <a href="/" class="flex items-center" aria-label="RÝNI home">
+            <img src="/logo-dark.png" alt="RÝNI" class="dark:hidden h-6 w-auto" />
+            <img src="/logo.png" alt="RÝNI" class="hidden h-6 w-auto dark:block" />
           </a>
           <Show when={auth.isAuthenticated()}>
             <nav class="flex gap-3 text-sm text-muted">
