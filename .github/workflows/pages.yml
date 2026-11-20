@@ -33,10 +33,12 @@ on:
         type: string
         default: ''
 
-# A new deployment cancels an in-flight one.
+# A new deployment queues behind an in-flight one. Do not cancel: a site build
+# racing a release deploy could otherwise drop the freshly published chart
+# index from the artifact that ends up live.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -136,3 +138,35 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
+
+  # GitHub Pages can keep serving the previous artifact for a few minutes
+  # after a successful deploy. Verify the Helm index is actually live so a
+  # stale index is not silently picked up by Artifact Hub's scheduled scan.
+  verify:
+    name: Verify published Helm index
+    needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Verify index.yaml matches latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)"
+          if [ -z "$LATEST" ]; then
+            echo "no release found; skipping index check"
+            exit 0
+          fi
+          LATEST="${LATEST#v}"
+          for i in $(seq 1 15); do
+            LIVE="$(curl -fsS "https://ryni.secanis.ch/index.yaml?cb=${GITHUB_RUN_ID}-${i}" 2>/dev/null | grep -m1 -E '^    version:' | awk '{print $2}' || true)"
+            echo "attempt ${i}: live=${LIVE:-none} expected=${LATEST}"
+            if [ "$LIVE" = "$LATEST" ]; then
+              echo "Helm index is up to date"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::ryni.secanis.ch/index.yaml does not list ${LATEST}; Pages deployment is stale"
+          exit 1

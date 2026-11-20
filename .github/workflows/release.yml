@@ -322,6 +322,25 @@ jobs:
           fi
           git worktree remove --force /tmp/gh-pages-index
 
+      # GitHub Pages keys a deployment by the commit SHA (pages_build_version):
+      # re-deploying the same SHA keeps serving the artifact built for it the
+      # first time. A release that only updates gh-pages therefore kept the
+      # old index.yaml live. Create a signed commit on main touching site/ so
+      # publish-site deploys a NEW build version that includes the updated
+      # gh-pages index.
+      - name: Create Pages deploy commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          CHART_VERSION: ${{ needs.resolve.outputs.chart_version }}
+        run: |
+          HEAD="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          CONTENT="$(printf '{"chart":"ryni","version":"%s","appVersion":"%s"}\n' "$CHART_VERSION" "$TAG" | base64 -w0)"
+          cat > /tmp/pages-commit.json <<EOF
+          {"query":"mutation(\$input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: \$input) { commit { oid } } }","variables":{"input":{"branch":{"repositoryNameWithOwner":"${GITHUB_REPOSITORY}","branchName":"main"},"message":{"headline":"chore(site): chart version $CHART_VERSION"},"fileChanges":{"additions":[{"path":"site/public/chart-version-${CHART_VERSION}.json","contents":"$CONTENT"}]},"expectedHeadOid":"$HEAD"}}}
+          EOF
+          gh api graphql --input /tmp/pages-commit.json
+
   # -------------------------------------------------------------------------
   # 4. Publish the landing page + Helm repo to GitHub Pages via the official
   # Actions deployment (pages.yml). Runs after release-helm has written the
@@ -333,7 +352,9 @@ jobs:
     needs: [resolve, release-helm]
     uses: ./.github/workflows/pages.yml
     with:
-      ref: ${{ needs.resolve.outputs.tag }}
+      # main, not the release tag: release-helm created a fresh signed commit
+      # there so Pages gets a new build version and re-reads gh-pages.
+      ref: main
     permissions:
       contents: read
       pages: write
