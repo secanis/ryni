@@ -2,19 +2,24 @@
 //
 // Bundled to an IIFE (frontend/public/ryni.js) and loaded via:
 //   <script src="..." data-ryni-server="https://ryni.example"
-//           data-ryni-site="<tracking_id>" data-ryni-detailed></script>
+//           data-ryni-site="<tracking_id>" data-ryni-detailed
+//           data-ryni-mode="standard|session|minimal"></script>
 //
 // Reads config synchronously (document.currentScript), then:
 //   - honors Do Not Track,
-//   - reads/creates the visitor id in localStorage,
+//   - reads/creates the visitor id per data-ryni-mode (standard: localStorage
+//     + sessionStorage fallback; session: sessionStorage; minimal: fresh id,
+//     no storage),
 //   - POSTs a "view" via sendBeacon (text/plain → no CORS preflight),
 //   - heartbeats every 60s while visible,
 //   - sends "end" + duration on pagehide/visibilitychange,
 //   - re-fires on pushState/popstate when data-ryni-detailed is set.
+//   Heartbeat/end are skipped entirely in minimal mode.
 
-import { getVisitorId, shouldTrack } from './identity';
+import { resolveVisitorId, shouldTrack } from './identity';
 import { detectClient } from './detect';
 import { buildPayload, endpointUrl } from './track';
+import { normalizeMode } from './types';
 import type { TrackerConfig, UtmParams } from './types';
 
 function readConfig(): TrackerConfig {
@@ -23,6 +28,7 @@ function readConfig(): TrackerConfig {
     server: (el?.getAttribute('data-ryni-server') || '').replace(/\/+$/, ''),
     site: el?.getAttribute('data-ryni-site') || '',
     detailed: el?.hasAttribute('data-ryni-detailed') ?? false,
+    mode: normalizeMode(el?.getAttribute('data-ryni-mode')),
   };
 }
 
@@ -50,7 +56,13 @@ function utmParams(): UtmParams | undefined {
 }
 
 const cfg = readConfig();
-const visitor = cfg.site ? getVisitorId(window.localStorage, cfg.site) : '';
+const visitor = cfg.site
+  ? resolveVisitorId(
+      { localStorage: window.localStorage, sessionStorage: window.sessionStorage },
+      cfg.site,
+      cfg.mode,
+    )
+  : '';
 
 let pageStart = Date.now();
 let tracked = false;
@@ -89,16 +101,20 @@ function start(): void {
 
   trackPage();
 
-  // Heartbeat for the live-visitor count.
-  setInterval(() => {
-    if (document.visibilityState === 'visible') send('heartbeat');
-  }, 60_000);
+  // Session-level tracking (heartbeat, end-on-hide) is skipped in minimal
+  // mode: minimal sends a single anonymous view, nothing more.
+  if (cfg.mode !== 'minimal') {
+    // Heartbeat for the live-visitor count.
+    setInterval(() => {
+      if (document.visibilityState === 'visible') send('heartbeat');
+    }, 60_000);
 
-  // Final duration on tab hide / close.
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') endSession();
-  });
-  window.addEventListener('pagehide', endSession);
+    // Final duration on tab hide / close.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') endSession();
+    });
+    window.addEventListener('pagehide', endSession);
+  }
 
   // SPA route changes (only when explicitly requested).
   if (cfg.detailed) {

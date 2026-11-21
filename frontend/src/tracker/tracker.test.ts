@@ -1,26 +1,68 @@
 import { describe, it, expect } from 'vitest';
-import { getVisitorId, shouldTrack } from '../tracker/identity';
+import { resolveVisitorId, shouldTrack } from '../tracker/identity';
+import { normalizeMode } from '../tracker/types';
 import { detectClient } from '../tracker/detect';
 import { buildPayload, endpointUrl } from '../tracker/track';
 
-function fakeStorage(): Pick<Storage, 'getItem' | 'setItem'> {
+interface FakeStorage extends Pick<Storage, 'getItem' | 'setItem'> {
+  map: Map<string, string>;
+}
+
+function fakeStorage(opts: { blocked?: boolean } = {}): FakeStorage {
   const m = new Map<string, string>();
   return {
+    map: m,
     getItem: (k: string) => m.get(k) ?? null,
     setItem: (k: string, v: string) => {
+      if (opts.blocked) throw new Error('storage blocked');
       m.set(k, v);
     },
   };
 }
 
 describe('identity', () => {
-  it('returns a stable id per site and distinct ids across sites', () => {
+  it('normalizeMode maps raw attribute values to modes', () => {
+    expect(normalizeMode('session')).toBe('session');
+    expect(normalizeMode('minimal')).toBe('minimal');
+    expect(normalizeMode('garbage')).toBe('standard');
+    expect(normalizeMode(undefined)).toBe('standard');
+  });
+
+  it('standard + working localStorage returns a stable id per site, distinct across sites', () => {
     const s = fakeStorage();
-    const a1 = getVisitorId(s, 'siteA');
-    const a2 = getVisitorId(s, 'siteA');
-    const b = getVisitorId(s, 'siteB');
+    const a1 = resolveVisitorId({ localStorage: s }, 'siteA', 'standard');
+    const a2 = resolveVisitorId({ localStorage: s }, 'siteA', 'standard');
+    const b = resolveVisitorId({ localStorage: s }, 'siteB', 'standard');
     expect(a1).toBe(a2);
     expect(a1).not.toBe(b);
+  });
+
+  it('standard + blocked localStorage falls back to sessionStorage and stays stable', () => {
+    const local = fakeStorage({ blocked: true });
+    const session = fakeStorage();
+    const first = resolveVisitorId({ localStorage: local, sessionStorage: session }, 'siteA', 'standard');
+    const second = resolveVisitorId({ localStorage: local, sessionStorage: session }, 'siteA', 'standard');
+    expect(first).toBe(second);
+    expect(session.map.has('ryni_visitor_siteA')).toBe(true);
+  });
+
+  it('session mode reads sessionStorage only', () => {
+    const local = fakeStorage();
+    const session = fakeStorage();
+    local.setItem('ryni_visitor_siteA', 'local-id');
+    session.setItem('ryni_visitor_siteA', 'session-id');
+    const id = resolveVisitorId({ localStorage: local, sessionStorage: session }, 'siteA', 'session');
+    expect(id).toBe('session-id');
+  });
+
+  it('minimal mode returns a fresh id and touches neither store', () => {
+    const local = fakeStorage();
+    const session = fakeStorage();
+    const a = resolveVisitorId({ localStorage: local, sessionStorage: session }, 'siteA', 'minimal');
+    const b = resolveVisitorId({ localStorage: local, sessionStorage: session }, 'siteA', 'minimal');
+    expect(a).not.toBe(b);
+    expect(local.map.size).toBe(0);
+    expect(session.map.size).toBe(0);
   });
 
   it('shouldTrack honors Do Not Track', () => {
