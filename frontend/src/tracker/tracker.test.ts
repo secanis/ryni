@@ -46,6 +46,23 @@ describe('identity', () => {
     expect(session.map.has('ryni_visitor_siteA')).toBe(true);
   });
 
+  it('standard + localStorage that throws on read falls back to sessionStorage and stays stable', () => {
+    const local = {
+      map: new Map<string, string>(),
+      getItem: () => {
+        throw new Error('storage read blocked');
+      },
+      setItem: () => {
+        throw new Error('storage write blocked');
+      },
+    };
+    const session = fakeStorage();
+    const first = resolveVisitorId({ localStorage: local, sessionStorage: session }, 'siteA', 'standard');
+    const second = resolveVisitorId({ localStorage: local, sessionStorage: session }, 'siteA', 'standard');
+    expect(first).toBe(second);
+    expect(session.map.has('ryni_visitor_siteA')).toBe(true);
+  });
+
   it('session mode reads sessionStorage only', () => {
     const local = fakeStorage();
     const session = fakeStorage();

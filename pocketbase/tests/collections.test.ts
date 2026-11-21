@@ -201,6 +201,22 @@ describe('collections', () => {
         400,
       );
     });
+
+    it('rejects an unknown disclosure_mode value', async () => {
+      const user = await createUserClient('disclosure-bad');
+      const trackingId = rand();
+      await expectRejected(
+        user.pb.collection('sites').create({
+          name: 'Bad Disclosure Site',
+          tracking_id: trackingId,
+          endpoint_slug: trackingId,
+          allowed_origins: [],
+          created_by: user.userId,
+          disclosure_mode: 'everything',
+        }),
+        400,
+      );
+    });
   });
 
   it('lets a superuser create a site (created_by is a plain marker, not a relation)', async () => {

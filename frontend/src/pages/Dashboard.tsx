@@ -86,7 +86,7 @@ export default function Dashboard() {
       case 'session':
         return "Visits are measured per browsing session, so returning-visitor counts aren't tracked.";
       case 'minimal':
-        return 'Only page views and device/browser breakdowns are recorded — nothing is stored on visitors\' devices.';
+        return "Page views and per-page breakdowns (browser, OS, device, screen, language, time zone, referrer, UTM) are recorded — nothing is stored on visitors' devices, so visits can't be linked together.";
       default:
         return 'Unique visitors are per browser profile and reset when browsing data is cleared.';
     }

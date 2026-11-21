@@ -2,7 +2,7 @@ import { createSignal, untrack } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { Trash2 } from 'lucide-solid';
 import { sitesStore } from '~/stores/sites';
-import { trackingModeOf } from '~/utils/privacy';
+import { disclosureModeOf, trackingModeOf } from '~/utils/privacy';
 import { bannerSnippet, disclosureText } from '~/utils/disclosure';
 import Snippet from '~/components/sites/Snippet';
 import CampaignLinks from '~/components/sites/CampaignLinks';
@@ -28,7 +28,7 @@ export default function SiteSettingsDialog(props: {
     untrack(() => trackingModeOf(props.site.tracking_mode)),
   );
   const [disclosureMode, setDisclosureMode] = createSignal<DisclosureMode>(
-    untrack(() => props.site.disclosure_mode ?? 'none'),
+    untrack(() => disclosureModeOf(props.site.disclosure_mode)),
   );
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
@@ -122,7 +122,7 @@ export default function SiteSettingsDialog(props: {
             <select
               id="site-tracking-mode"
               value={trackingMode()}
-              onChange={(e) => setTrackingMode(e.currentTarget.value as TrackingMode)}
+              onChange={(e) => setTrackingMode(trackingModeOf(e.currentTarget.value))}
               class={field}
             >
               <option value="standard">Standard</option>
@@ -137,7 +137,7 @@ export default function SiteSettingsDialog(props: {
             <select
               id="site-disclosure-mode"
               value={disclosureMode()}
-              onChange={(e) => setDisclosureMode(e.currentTarget.value as DisclosureMode)}
+              onChange={(e) => setDisclosureMode(disclosureModeOf(e.currentTarget.value))}
               class={field}
             >
               <option value="none">None</option>

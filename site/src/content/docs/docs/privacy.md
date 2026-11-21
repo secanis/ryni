@@ -138,7 +138,7 @@ way.
 | Views over time | ✓ | ✓ | ✓ (views only) |
 | Duration histogram | ✓ | ✓ | ✗ |
 | Landing / exit pages | ✓ | ✓ | ✗ |
-| Referrer, browser, OS, device, screen, page, UTM breakdowns | ✓ | ✓ | ✓ |
+| Referrer, browser, OS, device, screen, page, UTM, language, time zone, page title breakdowns | ✓ | ✓ | ✓ |
 
 Metrics a tier cannot produce are hidden in the dashboard rather than shown as
 zero.
@@ -195,8 +195,9 @@ The text is built from the tier. `[retention period]` and
 
 > This website uses Rýni, a self-hosted privacy-friendly analytics tool. Rýni
 > stores nothing on your device and cannot link your visits together. It
-> records only anonymous page views together with your browser and device type.
-> No IP address is stored, no cross-site tracking is performed, and the data
+> records the pages you view, the referring site, your browser and device type,
+> screen size, language, and time zone. No IP address is stored, no cross-site
+> tracking is performed, and the data
 > never leaves this server. The legal basis is legitimate interest
 > (Art. 6(1)(f) GDPR) in understanding how this site is used. You can object at
 > any time by enabling the 'Do Not Track' setting in your browser. Data is
@@ -210,7 +211,7 @@ The banner shows one tier-matched sentence:
 |------|------|
 | `standard` | This site uses privacy-friendly analytics. |
 | `session` | This site measures visits with a temporary, non-persistent identifier. |
-| `minimal` | This site counts anonymous page views — nothing is stored on your device. |
+| `minimal` | This site counts anonymous page views — no tracking data is stored on your device. |
 
 Neither the text nor the banner adds a cookie, a third-party request, or any
 storage beyond what the tier already uses.

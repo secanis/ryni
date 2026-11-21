@@ -21,10 +21,12 @@ async function create(data: {
   endpoint_slug: string;
   allowed_origins: string[];
   tracking_mode?: TrackingMode;
+  disclosure_mode?: DisclosureMode;
 }): Promise<Site> {
   const rec = await pb.collection('sites').create({
     ...data,
     tracking_mode: data.tracking_mode ?? 'standard',
+    disclosure_mode: data.disclosure_mode ?? 'none',
     created_by: pb.authStore.model?.id,
   });
   await load();
@@ -44,7 +46,12 @@ async function update(
     disclosure_mode?: DisclosureMode;
   },
 ): Promise<Site> {
-  const payload: Record<string, unknown> = {
+  const payload: {
+    name: string;
+    allowed_origins: string[];
+    tracking_mode?: TrackingMode;
+    disclosure_mode?: DisclosureMode;
+  } = {
     name: data.name,
     allowed_origins: data.allowed_origins,
   };

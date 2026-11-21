@@ -22,6 +22,8 @@ describe('disclosureText', () => {
     const text = disclosureText({ mode: 'minimal' });
     expect(text).toContain('stores nothing');
     expect(text).toContain('cannot link');
+    expect(text).toContain('referring site');
+    expect(text).toContain('screen size');
   });
 });
 
@@ -49,7 +51,7 @@ describe('bannerSnippet', () => {
       'This site measures visits with a temporary, non-persistent identifier.',
     );
     expect(bannerSnippet({ mode: 'minimal' })).toContain(
-      'This site counts anonymous page views — nothing is stored on your device.',
+      'This site counts anonymous page views — no tracking data is stored on your device.',
     );
   });
 

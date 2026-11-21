@@ -200,7 +200,7 @@ describe('ingest route', () => {
         filter: `visitor_id="v-min-dur"`,
       });
       expect(records.totalItems).toBe(1);
-      expect((records.items[0] as any).duration).not.toBe(42);
+      expect((records.items[0] as any).duration).toBe(0);
     });
   });
 });
