@@ -1,4 +1,4 @@
-import type { Snippets } from '~/types';
+import type { Snippets, TrackingMode } from '~/types';
 
 const CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -15,13 +15,17 @@ export interface SnippetInput {
   /** The site's tracking id. */
   site: string;
   detailed?: boolean;
+  /** Privacy tier; non-standard modes are advertised to the tracker. */
+  mode?: TrackingMode;
 }
 
 export function buildSnippets(input: SnippetInput): Snippets {
   const server = input.server.replace(/\/+$/, '');
   const detailed = input.detailed ? ' data-ryni-detailed' : '';
-  const variantA = `<script async src="${server}/ryni.js" data-ryni-server="${server}" data-ryni-site="${input.site}"${detailed}></script>`;
-  const variantB = `<script async src="/ryni.js" data-ryni-site="${input.site}"${detailed}></script>`;
+  const modeAttr =
+    input.mode === 'session' || input.mode === 'minimal' ? ` data-ryni-mode="${input.mode}"` : '';
+  const variantA = `<script async src="${server}/ryni.js" data-ryni-server="${server}" data-ryni-site="${input.site}"${modeAttr}${detailed}></script>`;
+  const variantB = `<script async src="/ryni.js" data-ryni-site="${input.site}"${modeAttr}${detailed}></script>`;
   const proxyNote = [
     'The proxy runs fully on your own origin, so adblockers see only same-origin requests.',
     '',

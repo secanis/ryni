@@ -29,6 +29,24 @@ describe('buildSnippets', () => {
     expect(variantA).toContain('data-ryni-detailed');
   });
 
+  it('emits no data-ryni-mode for standard mode', () => {
+    const { variantA, variantB } = buildSnippets({ server: 'https://ryni.example', site: 'abc123', mode: 'standard' });
+    expect(variantA).not.toContain('data-ryni-mode');
+    expect(variantB).not.toContain('data-ryni-mode');
+  });
+
+  it('emits data-ryni-mode="session" on both variants', () => {
+    const { variantA, variantB } = buildSnippets({ server: 'https://ryni.example', site: 'abc123', mode: 'session' });
+    expect(variantA).toContain('data-ryni-mode="session"');
+    expect(variantB).toContain('data-ryni-mode="session"');
+  });
+
+  it('emits data-ryni-mode="minimal" on both variants', () => {
+    const { variantA, variantB } = buildSnippets({ server: 'https://ryni.example', site: 'abc123', mode: 'minimal' });
+    expect(variantA).toContain('data-ryni-mode="minimal"');
+    expect(variantB).toContain('data-ryni-mode="minimal"');
+  });
+
   it('proxy note describes the forwarding route', () => {
     const { proxyNote } = buildSnippets({ server: 'https://ryni.example', site: 'abc123' });
     expect(proxyNote).toContain('proxy_pass https://ryni.example/t/');
