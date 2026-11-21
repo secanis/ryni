@@ -162,7 +162,14 @@ export default function SiteSettingsDialog(props: {
 
         <div class="border-t border-border pt-4">
           <h3 class="font-medium mb-3">Tracking code</h3>
-          <Snippet input={{ server: server(), site: props.site.tracking_id, detailed: false }} />
+          <Snippet
+            input={{
+              server: server(),
+              site: props.site.tracking_id,
+              detailed: false,
+              mode: trackingMode(),
+            }}
+          />
         </div>
 
         {disclosureMode() !== 'none' && (
