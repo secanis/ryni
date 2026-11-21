@@ -1,6 +1,6 @@
 import { createSignal } from 'solid-js';
 import { pb } from '~/services/pocketbase';
-import type { Site, SiteMembers } from '~/types';
+import type { DisclosureMode, Site, SiteMembers, TrackingMode } from '~/types';
 
 const [sites, setSites] = createSignal<Site[]>([]);
 const [loading, setLoading] = createSignal(false);
@@ -20,9 +20,13 @@ async function create(data: {
   tracking_id: string;
   endpoint_slug: string;
   allowed_origins: string[];
+  tracking_mode?: TrackingMode;
+  disclosure_mode?: DisclosureMode;
 }): Promise<Site> {
   const rec = await pb.collection('sites').create({
     ...data,
+    tracking_mode: data.tracking_mode ?? 'standard',
+    disclosure_mode: data.disclosure_mode ?? 'none',
     created_by: pb.authStore.model?.id,
   });
   await load();
@@ -35,9 +39,29 @@ async function get(id: string): Promise<Site> {
 
 async function update(
   id: string,
-  data: { name: string; allowed_origins: string[] },
+  data: {
+    name: string;
+    allowed_origins: string[];
+    tracking_mode?: TrackingMode;
+    disclosure_mode?: DisclosureMode;
+  },
 ): Promise<Site> {
-  const rec = await pb.collection('sites').update(id, data);
+  const payload: {
+    name: string;
+    allowed_origins: string[];
+    tracking_mode?: TrackingMode;
+    disclosure_mode?: DisclosureMode;
+  } = {
+    name: data.name,
+    allowed_origins: data.allowed_origins,
+  };
+  if (data.tracking_mode !== undefined) {
+    payload.tracking_mode = data.tracking_mode;
+  }
+  if (data.disclosure_mode !== undefined) {
+    payload.disclosure_mode = data.disclosure_mode;
+  }
+  const rec = await pb.collection('sites').update(id, payload);
   await load();
   return rec as unknown as Site;
 }

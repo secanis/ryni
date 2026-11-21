@@ -1,5 +1,9 @@
 // RÝNI — shared frontend types.
 
+export type TrackingMode = 'standard' | 'session' | 'minimal';
+
+export type DisclosureMode = 'none' | 'text' | 'banner';
+
 export interface Site {
   id: string;
   name: string;
@@ -11,6 +15,8 @@ export interface Site {
   viewers: string[];
   created: string;
   updated: string;
+  tracking_mode?: TrackingMode;
+  disclosure_mode?: DisclosureMode;
 }
 
 export interface Breakdown {

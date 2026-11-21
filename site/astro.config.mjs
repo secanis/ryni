@@ -38,6 +38,7 @@ export default defineConfig({
 						{ label: 'Quick start', slug: 'docs/quickstart' },
 						{ label: 'Tracking a website', slug: 'docs/tracking' },
 						{ label: 'Configuration', slug: 'docs/configuration' },
+						{ label: 'Privacy & GDPR', slug: 'docs/privacy' },
 						{ label: 'Helm', slug: 'docs/helm' },
 						{ label: 'SSO & backups', slug: 'docs/sso-and-backups' },
 						{ label: 'Development', slug: 'docs/development' },

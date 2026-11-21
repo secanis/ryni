@@ -62,6 +62,8 @@ Add `data-ryni-detailed` to re-fire on single-page-app route changes.
 - SSO via OIDC.
 - Scheduled + manual backups.
 - No cookies, no raw IP storage, honors Do Not Track.
+- Configurable privacy tiers (Standard / Session / Minimal) with generated GDPR
+  disclosure text and an optional banner.
 
 ## Documentation
 

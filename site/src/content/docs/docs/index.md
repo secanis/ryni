@@ -33,6 +33,8 @@ One client script, two ways to deploy it:
 - [Quick start](/docs/quickstart/) — run it with Docker Compose.
 - [Tracking a website](/docs/tracking/) — the two snippets and how to wire them up.
 - [Configuration](/docs/configuration/) — environment variables.
+- [Privacy & GDPR](/docs/privacy/) — tracking tiers, device storage, and
+  disclosure copy.
 - [Helm](/docs/helm/) — install on Kubernetes.
 - [SSO & backups](/docs/sso-and-backups/) — OIDC and instance backups.
 - [Development](/docs/development/) — build from source.

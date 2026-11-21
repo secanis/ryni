@@ -30,6 +30,7 @@ export default function SiteNew() {
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
+        tracking_mode: 'standard',
       });
       setCreated(site);
     } catch (err) {

@@ -132,6 +132,93 @@ describe('collections', () => {
     await expectRejected(a.pb.collection('heartbeats').create({ site: 'x', visitor_id: 'v' }), 403);
   });
 
+  describe('privacy settings fields', () => {
+    it('exposes tracking_mode and disclosure_mode with the allowed values', async () => {
+      const admin = await createAdminClient();
+      const sites = await admin.collections.getOne('sites');
+      const byName = new Map<string, any>(sites.fields.map((f: any) => [f.name, f]));
+
+      const tracking = byName.get('tracking_mode');
+      expect(tracking).toBeTruthy();
+      expect(tracking.required).toBeFalsy();
+      expect(tracking.maxSelect).toBe(1);
+      expect(tracking.values).toEqual(['standard', 'session', 'minimal']);
+
+      const disclosure = byName.get('disclosure_mode');
+      expect(disclosure).toBeTruthy();
+      expect(disclosure.required).toBeFalsy();
+      expect(disclosure.maxSelect).toBe(1);
+      expect(disclosure.values).toEqual(['none', 'text', 'banner']);
+    });
+
+    it('stores tracking_mode = minimal on create and reads it back', async () => {
+      const tracked = await createUserClient('privacy-mode');
+      const trackingId = rand();
+      const site = await tracked.pb.collection('sites').create({
+        name: 'Minimal Site',
+        tracking_id: trackingId,
+        endpoint_slug: trackingId,
+        allowed_origins: [],
+        created_by: tracked.userId,
+        tracking_mode: 'minimal',
+        disclosure_mode: 'banner',
+      });
+
+      const fetched = await tracked.pb.collection('sites').getOne(site.id);
+      expect(fetched.tracking_mode).toBe('minimal');
+      expect(fetched.disclosure_mode).toBe('banner');
+    });
+
+    it('allows a site without tracking_mode (field stays empty)', async () => {
+      const plain = await createUserClient('privacy-empty');
+      const trackingId = rand();
+      const site = await plain.pb.collection('sites').create({
+        name: 'Plain Site',
+        tracking_id: trackingId,
+        endpoint_slug: trackingId,
+        allowed_origins: [],
+        created_by: plain.userId,
+      });
+      expect(site.id).toBeTruthy();
+
+      const fetched = await plain.pb.collection('sites').getOne(site.id);
+      expect(fetched.tracking_mode || '').toBe('');
+      expect(fetched.disclosure_mode || '').toBe('');
+    });
+
+    it('rejects an unknown tracking_mode value', async () => {
+      const user = await createUserClient('privacy-bad');
+      const trackingId = rand();
+      await expectRejected(
+        user.pb.collection('sites').create({
+          name: 'Bad Site',
+          tracking_id: trackingId,
+          endpoint_slug: trackingId,
+          allowed_origins: [],
+          created_by: user.userId,
+          tracking_mode: 'everything',
+        }),
+        400,
+      );
+    });
+
+    it('rejects an unknown disclosure_mode value', async () => {
+      const user = await createUserClient('disclosure-bad');
+      const trackingId = rand();
+      await expectRejected(
+        user.pb.collection('sites').create({
+          name: 'Bad Disclosure Site',
+          tracking_id: trackingId,
+          endpoint_slug: trackingId,
+          allowed_origins: [],
+          created_by: user.userId,
+          disclosure_mode: 'everything',
+        }),
+        400,
+      );
+    });
+  });
+
   it('lets a superuser create a site (created_by is a plain marker, not a relation)', async () => {
     const admin = await createAdminClient();
     const trackingId = rand();

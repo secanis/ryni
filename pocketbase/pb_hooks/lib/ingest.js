@@ -144,6 +144,11 @@ function handler(e) {
         return;
     }
 
+    // Minimal tier: skip identity-correlated bookkeeping (heartbeat, duration,
+    // new-visitor). The view record itself is still stored — only the
+    // cross-visit correlation signals are dropped. Empty/missing = standard.
+    var minimal = (str(site.get('tracking_mode'), 20) || 'standard') === 'minimal';
+
     // Variant A: cross-origin browser requests carry an `Origin` header —
     // enforce the site's allowed_origins. Variant B (same-origin proxy)
     // carries no `Origin`, so gate it on the browser's Sec-Fetch-Site signal.
@@ -190,14 +195,16 @@ function handler(e) {
     var siteId = site.id;
 
     if (type === 'heartbeat') {
-        upsertHeartbeat(siteId, visitor);
+        if (!minimal) upsertHeartbeat(siteId, visitor);
         noContent(e);
         return;
     }
 
     if (type === 'end') {
-        applyDuration(siteId, visitor, Number(body.duration) || 0);
-        removeHeartbeat(siteId, visitor);
+        if (!minimal) {
+            applyDuration(siteId, visitor, Number(body.duration) || 0);
+            removeHeartbeat(siteId, visitor);
+        }
         noContent(e);
         return;
     }
@@ -205,7 +212,7 @@ function handler(e) {
     // Default "view": create a record; apply any carried duration to the
     // previous null-duration record first.
     var duration = Number(body.duration);
-    if (!isNaN(duration) && duration > 0) {
+    if (!minimal && !isNaN(duration) && duration > 0) {
         applyDuration(siteId, visitor, duration);
     }
 
@@ -225,10 +232,10 @@ function handler(e) {
     rec.set('utm_source', str(body.utm_source, 200));
     rec.set('utm_medium', str(body.utm_medium, 200));
     rec.set('utm_campaign', str(body.utm_campaign, 200));
-    rec.set('is_new_visitor', isNewVisitor(siteId, visitor));
+    rec.set('is_new_visitor', minimal ? false : isNewVisitor(siteId, visitor));
     $app.save(rec);
 
-    upsertHeartbeat(siteId, visitor);
+    if (!minimal) upsertHeartbeat(siteId, visitor);
     noContent(e);
 }
 
