@@ -2,14 +2,15 @@ import { createSignal, untrack } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { Trash2 } from 'lucide-solid';
 import { sitesStore } from '~/stores/sites';
+import { trackingModeOf } from '~/utils/privacy';
 import Snippet from '~/components/sites/Snippet';
 import CampaignLinks from '~/components/sites/CampaignLinks';
 import CopyButton from '~/components/ui/CopyButton';
-import type { Site } from '~/types';
+import type { Site, TrackingMode } from '~/types';
 
 // Edit dialog for an existing site: rename, change the allowed origins
-// (the tracked site's URL(s) for Variant A), and review the integration
-// snippets again. Also offers site deletion.
+// (the tracked site's URL(s) for Variant A), pick the privacy tier, and
+// review the integration snippets again. Also offers site deletion.
 export default function SiteSettingsDialog(props: {
   site: Site;
   onClose: () => void;
@@ -21,6 +22,9 @@ export default function SiteSettingsDialog(props: {
   const [name, setName] = createSignal(untrack(() => props.site.name));
   const [origins, setOrigins] = createSignal(
     untrack(() => (props.site.allowed_origins || []).join(', ')),
+  );
+  const [trackingMode, setTrackingMode] = createSignal<TrackingMode>(
+    untrack(() => trackingModeOf(props.site.tracking_mode)),
   );
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
@@ -38,6 +42,7 @@ export default function SiteSettingsDialog(props: {
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
+        tracking_mode: trackingMode(),
       });
       props.onSaved?.(updated);
       props.onClose();
@@ -104,6 +109,21 @@ export default function SiteSettingsDialog(props: {
               placeholder="https://mysite.example"
               class={field}
             />
+          </div>
+          <div>
+            <label for="site-tracking-mode" class="block text-sm mb-1">
+              Privacy tier
+            </label>
+            <select
+              id="site-tracking-mode"
+              value={trackingMode()}
+              onChange={(e) => setTrackingMode(e.currentTarget.value as TrackingMode)}
+              class={field}
+            >
+              <option value="standard">Standard</option>
+              <option value="session">Session</option>
+              <option value="minimal">Minimal</option>
+            </select>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
