@@ -11,13 +11,14 @@ beforeAll(async () => {
   admin = await createAdminClient();
 });
 
-async function makeSite(allowed: string[]): Promise<string> {
+async function makeSite(allowed: string[], mode?: string): Promise<string> {
   const s = rand();
   await admin.collection('sites').create({
     name: 'Ingest Site',
     tracking_id: s,
     endpoint_slug: s,
     allowed_origins: allowed,
+    ...(mode ? { tracking_mode: mode } : {}),
   });
   return s;
 }
@@ -143,5 +144,63 @@ describe('ingest route', () => {
     });
     expect(records.totalItems).toBe(1);
     expect((records.items[0] as any).duration).toBe(42);
+  });
+
+  describe('minimal tracking_mode', () => {
+    it('stores the view but forces is_new_visitor=false', async () => {
+      const s = await makeSite(['https://min.example'], 'minimal');
+      const res = await post(
+        s,
+        { visitor: 'v-min-view', page: '/minimal', browser: 'Chrome' },
+        'https://min.example',
+      );
+      expect(res.status).toBe(204);
+      expect(await res.text()).toBe('');
+
+      const records = await admin.collection('records').getList(1, 10, {
+        filter: `visitor_id="v-min-view"`,
+      });
+      expect(records.totalItems).toBe(1);
+      expect((records.items[0] as any).is_new_visitor).toBe(false);
+      expect((records.items[0] as any).path).toBe('/minimal');
+    });
+
+    it('writes no heartbeat row for a minimal visitor', async () => {
+      const s = await makeSite(['https://min.example'], 'minimal');
+      const res = await post(
+        s,
+        { visitor: 'v-min-hb', type: 'heartbeat' },
+        'https://min.example',
+      );
+      expect(res.status).toBe(204);
+
+      const heartbeats = await admin.collection('heartbeats').getList(1, 10, {
+        filter: `visitor_id="v-min-hb"`,
+      });
+      expect(heartbeats.totalItems).toBe(0);
+    });
+
+    it('does not apply duration on "end" for a minimal visitor', async () => {
+      const s = await makeSite(['https://min.example'], 'minimal');
+      const v = await post(
+        s,
+        { visitor: 'v-min-dur', page: '/page1' },
+        'https://min.example',
+      );
+      expect(v.status).toBe(204);
+
+      const e = await post(
+        s,
+        { visitor: 'v-min-dur', type: 'end', duration: 42 },
+        'https://min.example',
+      );
+      expect(e.status).toBe(204);
+
+      const records = await admin.collection('records').getList(1, 10, {
+        filter: `visitor_id="v-min-dur"`,
+      });
+      expect(records.totalItems).toBe(1);
+      expect((records.items[0] as any).duration).not.toBe(42);
+    });
   });
 });
