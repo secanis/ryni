@@ -1,6 +1,6 @@
 import { createSignal } from 'solid-js';
 import { pb } from '~/services/pocketbase';
-import type { Site, SiteMembers, TrackingMode } from '~/types';
+import type { DisclosureMode, Site, SiteMembers, TrackingMode } from '~/types';
 
 const [sites, setSites] = createSignal<Site[]>([]);
 const [loading, setLoading] = createSignal(false);
@@ -37,7 +37,12 @@ async function get(id: string): Promise<Site> {
 
 async function update(
   id: string,
-  data: { name: string; allowed_origins: string[]; tracking_mode?: TrackingMode },
+  data: {
+    name: string;
+    allowed_origins: string[];
+    tracking_mode?: TrackingMode;
+    disclosure_mode?: DisclosureMode;
+  },
 ): Promise<Site> {
   const payload: Record<string, unknown> = {
     name: data.name,
@@ -45,6 +50,9 @@ async function update(
   };
   if (data.tracking_mode !== undefined) {
     payload.tracking_mode = data.tracking_mode;
+  }
+  if (data.disclosure_mode !== undefined) {
+    payload.disclosure_mode = data.disclosure_mode;
   }
   const rec = await pb.collection('sites').update(id, payload);
   await load();

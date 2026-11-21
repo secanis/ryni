@@ -3,10 +3,11 @@ import { useNavigate } from '@solidjs/router';
 import { Trash2 } from 'lucide-solid';
 import { sitesStore } from '~/stores/sites';
 import { trackingModeOf } from '~/utils/privacy';
+import { bannerSnippet, disclosureText } from '~/utils/disclosure';
 import Snippet from '~/components/sites/Snippet';
 import CampaignLinks from '~/components/sites/CampaignLinks';
 import CopyButton from '~/components/ui/CopyButton';
-import type { Site, TrackingMode } from '~/types';
+import type { DisclosureMode, Site, TrackingMode } from '~/types';
 
 // Edit dialog for an existing site: rename, change the allowed origins
 // (the tracked site's URL(s) for Variant A), pick the privacy tier, and
@@ -26,6 +27,9 @@ export default function SiteSettingsDialog(props: {
   const [trackingMode, setTrackingMode] = createSignal<TrackingMode>(
     untrack(() => trackingModeOf(props.site.tracking_mode)),
   );
+  const [disclosureMode, setDisclosureMode] = createSignal<DisclosureMode>(
+    untrack(() => props.site.disclosure_mode ?? 'none'),
+  );
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
 
@@ -43,6 +47,7 @@ export default function SiteSettingsDialog(props: {
           .map((s) => s.trim())
           .filter(Boolean),
         tracking_mode: trackingMode(),
+        disclosure_mode: disclosureMode(),
       });
       props.onSaved?.(updated);
       props.onClose();
@@ -125,6 +130,21 @@ export default function SiteSettingsDialog(props: {
               <option value="minimal">Minimal</option>
             </select>
           </div>
+          <div>
+            <label for="site-disclosure-mode" class="block text-sm mb-1">
+              Privacy disclosure
+            </label>
+            <select
+              id="site-disclosure-mode"
+              value={disclosureMode()}
+              onChange={(e) => setDisclosureMode(e.currentTarget.value as DisclosureMode)}
+              class={field}
+            >
+              <option value="none">None</option>
+              <option value="text">Text</option>
+              <option value="banner">Banner</option>
+            </select>
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm mb-1">Tracking id</label>
@@ -144,6 +164,30 @@ export default function SiteSettingsDialog(props: {
           <h3 class="font-medium mb-3">Tracking code</h3>
           <Snippet input={{ server: server(), site: props.site.tracking_id, detailed: false }} />
         </div>
+
+        {disclosureMode() !== 'none' && (
+          <div class="border-t border-border pt-4 space-y-4">
+            <h3 class="font-medium">Privacy disclosure</h3>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-sm">Disclosure text</label>
+                <CopyButton text={disclosureText({ mode: trackingMode() })} label="Copy text" />
+              </div>
+              <pre class="whitespace-pre-wrap break-words text-sm font-mono border border-border rounded-radius-sm p-3 bg-surface dark:bg-surface-2 max-h-48 overflow-y-auto">
+                {disclosureText({ mode: trackingMode() })}
+              </pre>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-sm">Dismissal banner</label>
+                <CopyButton text={bannerSnippet({ mode: trackingMode() })} label="Copy banner" />
+              </div>
+              <pre class="whitespace-pre-wrap break-all text-sm font-mono border border-border rounded-radius-sm p-3 bg-surface dark:bg-surface-2 max-h-48 overflow-y-auto">
+                {bannerSnippet({ mode: trackingMode() })}
+              </pre>
+            </div>
+          </div>
+        )}
 
         <div class="border-t border-border pt-4">
           <CampaignLinks baseUrl={props.site.allowed_origins?.[0] ?? ''} />
