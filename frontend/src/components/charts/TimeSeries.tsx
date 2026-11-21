@@ -65,9 +65,16 @@ function areaPath(n: number, xy: (i: number) => [number, number], baseline: numb
   return `${line} L ${xn.toFixed(2)} ${baseline} L ${x0.toFixed(2)} ${baseline} Z`;
 }
 
-export default function TimeSeries(props: { points: SeriesPoint[]; compact?: boolean }) {
+export default function TimeSeries(props: {
+  points: SeriesPoint[];
+  compact?: boolean;
+  showUniques?: boolean;
+}) {
   return (
-    <Show when={props.compact} fallback={<FullSeries points={props.points} />}>
+    <Show
+      when={props.compact}
+      fallback={<FullSeries points={props.points} showUniques={props.showUniques !== false} />}
+    >
       <MiniSeries points={props.points} />
     </Show>
   );
@@ -127,7 +134,7 @@ function MiniSeries(props: { points: SeriesPoint[] }) {
 // Full chart with axes and hover tooltip. The viewBox width tracks the measured
 // container width so the SVG maps 1:1 to pixels (no letterboxing, no text
 // distortion) while still spanning the full card width.
-function FullSeries(props: { points: SeriesPoint[] }) {
+function FullSeries(props: { points: SeriesPoint[]; showUniques: boolean }) {
   const [hover, setHover] = createSignal<number | null>(null);
   const [width, setWidth] = createSignal(600);
   let host: HTMLDivElement | undefined;
@@ -261,7 +268,11 @@ function FullSeries(props: { points: SeriesPoint[] }) {
               width={step()}
               height={plotH()}
               fill="transparent"
-              aria-label={`${p.date}: ${p.views} views, ${p.uniqueVisitors} visitors`}
+              aria-label={
+                props.showUniques
+                  ? `${p.date}: ${p.views} views, ${p.uniqueVisitors} visitors`
+                  : `${p.date}: ${p.views} views`
+              }
               onMouseEnter={() => setHover(i())}
             />
           )}
@@ -271,7 +282,10 @@ function FullSeries(props: { points: SeriesPoint[] }) {
         <Show when={hovered()}>
           {(h) => {
             const dateStr = () => formatDate(h().point.date);
-            const metricsStr = () => `${h().point.views} views · ${h().point.uniqueVisitors} visitors`;
+            const metricsStr = () =>
+              props.showUniques
+                ? `${h().point.views} views · ${h().point.uniqueVisitors} visitors`
+                : `${h().point.views} views`;
             const tw = () => Math.max(dateStr().length, metricsStr().length) * 6.2 + 16;
             const th = 36;
             const gap = 8;

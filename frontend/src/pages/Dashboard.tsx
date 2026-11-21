@@ -1,9 +1,10 @@
-import { createEffect, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, Show } from 'solid-js';
 import { useParams } from '@solidjs/router';
 import { Pencil, Share2 } from 'lucide-solid';
 import { statsStore } from '~/stores/stats';
 import { sitesStore } from '~/stores/sites';
 import type { Site, SiteMembers } from '~/types';
+import { trackingModeOf } from '~/utils/privacy';
 import StatCard from '~/components/dashboard/StatCard';
 import DateRange, { type DateRangeValue } from '~/components/dashboard/DateRange';
 import TimeSeries from '~/components/charts/TimeSeries';
@@ -48,6 +49,48 @@ export default function Dashboard() {
   }
 
   const s = () => statsStore.stats();
+  const mode = () => trackingModeOf(site()?.tracking_mode);
+
+  const cards = createMemo(() => {
+    const stats = s();
+    if (!stats) return [];
+    const m = mode();
+    const list = [{ label: 'Views', value: String(stats.views) }];
+    if (m !== 'minimal') {
+      list.push({
+        label: m === 'session' ? 'Visitors (per session)' : 'Unique visitors',
+        value: String(stats.uniqueVisitors),
+      });
+    }
+    if (m === 'standard') {
+      list.push(
+        { label: 'New visitors', value: String(stats.newVisitors) },
+        { label: 'Returning visitors', value: String(stats.returningVisitors) },
+      );
+    }
+    if (m !== 'minimal') {
+      list.push(
+        { label: 'Sessions', value: String(stats.sessions) },
+        { label: 'Avg duration', value: `${stats.avgDuration}s` },
+        { label: 'Avg session duration', value: `${stats.avgSessionDuration}s` },
+        { label: 'Bounce rate', value: `${Math.round(stats.bounceRate * 100)}%` },
+        { label: 'Pages / session', value: String(stats.pagesPerSession) },
+        { label: 'Current', value: String(stats.currentVisitors) },
+      );
+    }
+    return list;
+  });
+
+  const tierNote = () => {
+    switch (mode()) {
+      case 'session':
+        return "Visits are measured per browsing session, so returning-visitor counts aren't tracked.";
+      case 'minimal':
+        return 'Only page views and device/browser breakdowns are recorded — nothing is stored on visitors\' devices.';
+      default:
+        return 'Unique visitors are per browser profile and reset when browsing data is cleared.';
+    }
+  };
 
   return (
     <div class="space-y-6">
@@ -111,22 +154,18 @@ export default function Dashboard() {
       </Show>
 
       <Show when={!statsStore.loading() && s()} fallback={<p class="text-muted">Loading…</p>}>
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <StatCard label="Views" value={String(s()!.views)} />
-          <StatCard label="Unique visitors" value={String(s()!.uniqueVisitors)} />
-          <StatCard label="New visitors" value={String(s()!.newVisitors)} />
-          <StatCard label="Returning visitors" value={String(s()!.returningVisitors)} />
-          <StatCard label="Sessions" value={String(s()!.sessions)} />
-          <StatCard label="Avg duration" value={`${s()!.avgDuration}s`} />
-          <StatCard label="Avg session duration" value={`${s()!.avgSessionDuration}s`} />
-          <StatCard label="Bounce rate" value={`${Math.round(s()!.bounceRate * 100)}%`} />
-          <StatCard label="Pages / session" value={String(s()!.pagesPerSession)} />
-          <StatCard label="Current" value={String(s()!.currentVisitors)} />
+        <div>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <For each={cards()}>
+              {(card) => <StatCard label={card.label} value={card.value} />}
+            </For>
+          </div>
+          <p class="text-xs text-muted mt-2">{tierNote()}</p>
         </div>
 
         <div class="p-4 bg-surface rounded-radius-card border border-border">
           <h3 class="font-medium mb-3">Views over time</h3>
-          <TimeSeries points={s()!.series} />
+          <TimeSeries points={s()!.series} showUniques={mode() !== 'minimal'} />
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -134,8 +173,10 @@ export default function Dashboard() {
           <Breakdown title="UTM source" items={s()!.utmSources} />
           <Breakdown title="UTM medium" items={s()!.utmMediums} />
           <Breakdown title="UTM campaign" items={s()!.utmCampaigns} />
-          <Breakdown title="Landing pages" items={s()!.landingPages} />
-          <Breakdown title="Exit pages" items={s()!.exitPages} />
+          <Show when={mode() !== 'minimal'}>
+            <Breakdown title="Landing pages" items={s()!.landingPages} />
+            <Breakdown title="Exit pages" items={s()!.exitPages} />
+          </Show>
           <Breakdown title="Pages" items={s()!.pages} />
           <Breakdown title="Page titles" items={s()!.titles} />
           <Breakdown title="Browsers" items={s()!.browsers} />
@@ -146,7 +187,9 @@ export default function Dashboard() {
           <Breakdown title="Timezones" items={s()!.timezones} />
           <Breakdown title="Hour of day" items={s()!.hours} />
           <Breakdown title="Day of week" items={s()!.daysOfWeek} />
-          <Breakdown title="Duration" items={s()!.durations} />
+          <Show when={mode() !== 'minimal'}>
+            <Breakdown title="Duration" items={s()!.durations} />
+          </Show>
         </div>
       </Show>
     </div>
