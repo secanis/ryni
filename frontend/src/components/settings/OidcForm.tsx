@@ -1,10 +1,30 @@
-import { createSignal } from 'solid-js';
+import { createSignal, onMount } from 'solid-js';
 import { pb } from '~/services/pocketbase';
 import CopyButton from '~/components/ui/CopyButton';
 
 // OIDC / SSO configuration form (superuser only — gated by the parent
 // Settings page). Registers the "oidc" provider on the `users` collection
 // via the backend route (pb_hooks/oidc.pb.js).
+//
+// The saved config is loaded on mount so the form reflects what is actually
+// registered after a reload. The client secret is never returned by the API;
+// an empty secret field on save keeps the stored one.
+
+interface OidcConfig {
+  configured?: boolean;
+  enabled?: boolean;
+  displayName?: string;
+  clientId?: string;
+  authUrl?: string;
+  tokenUrl?: string;
+  userInfoUrl?: string;
+  hasSecret?: boolean;
+}
+
+interface OidcResponse {
+  ok?: boolean;
+  config?: OidcConfig;
+}
 
 export default function OidcForm() {
   const [displayName, setDisplayName] = createSignal('OIDC');
@@ -13,9 +33,29 @@ export default function OidcForm() {
   const [authUrl, setAuthUrl] = createSignal('');
   const [tokenUrl, setTokenUrl] = createSignal('');
   const [userInfoUrl, setUserInfoUrl] = createSignal('');
+  const [hasSecret, setHasSecret] = createSignal(false);
   const [message, setMessage] = createSignal('');
   const [error, setError] = createSignal('');
   const [busy, setBusy] = createSignal(false);
+
+  function applyConfig(cfg: OidcConfig | undefined) {
+    if (!cfg) return;
+    setDisplayName(cfg.displayName || 'OIDC');
+    setClientId(cfg.clientId || '');
+    setAuthUrl(cfg.authUrl || '');
+    setTokenUrl(cfg.tokenUrl || '');
+    setUserInfoUrl(cfg.userInfoUrl || '');
+    setHasSecret(!!cfg.hasSecret);
+  }
+
+  onMount(async () => {
+    try {
+      const res = (await pb.send('/api/ryni/oidc', { method: 'GET' })) as OidcResponse;
+      applyConfig(res?.config);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load OIDC config');
+    }
+  });
 
   async function onSubmit(e: Event) {
     e.preventDefault();
@@ -23,17 +63,24 @@ export default function OidcForm() {
     setMessage('');
     setBusy(true);
     try {
-      await pb.send('/api/ryni/oidc', {
+      // Only send the secret when the admin entered a new one; an empty field
+      // means "keep the stored secret".
+      const body: Record<string, string> = {
+        displayName: displayName(),
+        clientId: clientId(),
+        authUrl: authUrl(),
+        tokenUrl: tokenUrl(),
+        userInfoUrl: userInfoUrl(),
+      };
+      if (clientSecret()) body.clientSecret = clientSecret();
+
+      const res = (await pb.send('/api/ryni/oidc', {
         method: 'POST',
-        body: {
-          displayName: displayName(),
-          clientId: clientId(),
-          clientSecret: clientSecret(),
-          authUrl: authUrl(),
-          tokenUrl: tokenUrl(),
-          userInfoUrl: userInfoUrl(),
-        },
-      });
+        body,
+      })) as OidcResponse;
+      applyConfig(res?.config);
+      setClientSecret('');
+      setHasSecret(true);
       setMessage('OIDC provider saved.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save OIDC config');
@@ -71,8 +118,9 @@ export default function OidcForm() {
           autocomplete="off"
           value={clientSecret()}
           onInput={(e) => setClientSecret(e.currentTarget.value)}
+          placeholder={hasSecret() ? 'Stored — leave blank to keep' : ''}
           class={field}
-          required
+          required={!hasSecret()}
         />
       </div>
       <div>
