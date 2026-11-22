@@ -4,6 +4,8 @@ import { pb } from '~/services/pocketbase';
 import type { SeriesPoint, Site } from '~/types';
 import CopyButton from '~/components/ui/CopyButton';
 import TimeSeries from '~/components/charts/TimeSeries';
+import SiteLabels from '~/components/sites/SiteLabels';
+import { siteLabels } from '~/utils/labels';
 
 interface MiniStats {
   views: number;
@@ -39,6 +41,8 @@ export default function SiteCard(props: { site: Site }) {
           <CopyButton text={props.site.tracking_id} />
         </span>
       </div>
+
+      <SiteLabels labels={siteLabels(props.site)} />
 
       <Show when={mini()}>
         <div class="mt-3 flex items-center justify-between gap-3">
