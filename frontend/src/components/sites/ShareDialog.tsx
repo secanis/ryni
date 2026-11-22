@@ -74,9 +74,10 @@ export default function ShareDialog(props: { siteId: string; onClose: () => void
                     {u.name && <div class="text-xs text-muted">{u.name}</div>}
                   </div>
                   <button
+                    type="button"
                     onClick={() => void grant(u.id)}
                     disabled={busy()}
-                    class="text-sm underline disabled:opacity-50"
+                    class="bg-accent text-accent-fg rounded-radius-sm px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                   >
                     Grant
                   </button>
