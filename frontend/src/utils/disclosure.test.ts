@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { disclosureText, bannerSnippet } from './disclosure';
+import { JSDOM } from 'jsdom';
+import { DEFAULT_DISCLOSURE_URL, disclosureText, bannerSnippet } from './disclosure';
 
 describe('disclosureText', () => {
   it('standard mode states local storage, no cookies, legitimate interest and placeholders', () => {
@@ -60,9 +61,47 @@ describe('bannerSnippet', () => {
     expect(bannerSnippet({ mode: 'standard' })).not.toContain('href=');
   });
 
-  it('includes a Learn more link when privacyUrl is set', () => {
+  it('defaults the Learn more link target to the Rýni website', () => {
+    expect(DEFAULT_DISCLOSURE_URL).toBe('https://ryni.secanis.ch');
+  });
+
+  it('includes a Learn more link as part of the banner copy when privacyUrl is set', () => {
     const banner = bannerSnippet({ mode: 'standard', privacyUrl: 'https://example.com/privacy' });
-    expect(banner).toContain('Learn more');
-    expect(banner).toContain('https://example.com/privacy');
+    // The link belongs to the summary sentence, not a separate element after it.
+    expect(banner).toContain(
+      '<span>This site uses privacy-friendly analytics. <a href="https://example.com/privacy"',
+    );
+    expect(banner).toContain('Learn more</a></span>');
+  });
+
+  it('escapes the privacy URL', () => {
+    const banner = bannerSnippet({ mode: 'standard', privacyUrl: 'https://example.com/?a="b"' });
+    expect(banner).toContain('https://example.com/?a=&quot;b&quot;');
+  });
+
+  it('dismisses via an inline handler, so it also works when injected with innerHTML', () => {
+    const dom = new JSDOM('<!doctype html><html><body><div id="host"></div></body></html>', {
+      runScripts: 'dangerously',
+      url: 'https://example.com',
+    });
+    const { document, localStorage } = dom.window;
+    // innerHTML never executes inline <script> tags — the reported bug.
+    document.getElementById('host')!.innerHTML = bannerSnippet({ mode: 'standard' });
+    expect(document.getElementById('ryni-disclosure')).not.toBeNull();
+
+    document.getElementById('ryni-disclosure-dismiss')!.click();
+
+    expect(document.getElementById('ryni-disclosure')).toBeNull();
+    expect(localStorage.getItem('ryni_disclosure_dismissed')).toBe('1');
+  });
+
+  it('stays hidden on the next page load once dismissed', () => {
+    const dom = new JSDOM(
+      `<!doctype html><html><body><script>localStorage.setItem('ryni_disclosure_dismissed','1');</script>${bannerSnippet(
+        { mode: 'standard' },
+      )}</body></html>`,
+      { runScripts: 'dangerously', url: 'https://example.com' },
+    );
+    expect(dom.window.document.getElementById('ryni-disclosure')).toBeNull();
   });
 });

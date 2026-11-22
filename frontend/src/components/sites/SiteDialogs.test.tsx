@@ -90,4 +90,12 @@ describe('site dialogs', () => {
       expect.objectContaining({ labels: ['prod', 'Acme'] }),
     );
   });
+
+  it('DisclosureDialog defaults the banner link to the Rýni website', () => {
+    const host = mount(() => <DisclosureDialog site={site} onClose={() => {}} />);
+    const input = host.querySelector<HTMLInputElement>('#disclosure-url');
+    expect(input).not.toBeNull();
+    expect(input!.value).toBe('https://ryni.secanis.ch');
+    expect(host.textContent).toContain('Learn more</a>');
+  });
 });

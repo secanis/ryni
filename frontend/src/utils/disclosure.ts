@@ -51,6 +51,12 @@ const SUMMARIES: Record<TrackingMode, string> = {
   minimal: 'This site counts anonymous page views — no tracking data is stored on your device.',
 };
 
+/** Default target for the banner's "Learn more" link (Rýni's own site). */
+export const DEFAULT_DISCLOSURE_URL = 'https://ryni.secanis.ch';
+
+/** Storage key holding the dismissal flag (same key for every tier). */
+const DISMISS_KEY = 'ryni_disclosure_dismissed';
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -65,6 +71,13 @@ function escapeHtml(value: string): string {
  * requests, no consent buttons. Dismissal is stored per tier: `standard` persists
  * in localStorage, `session`/`minimal` in sessionStorage (storage guarded by
  * try/catch so a blocked storage never throws on the host page).
+ *
+ * Dismissal uses an inline `onclick` attribute rather than a listener attached
+ * from the trailing `<script>`. Event-handler attributes are compiled by the
+ * browser even when the snippet is inserted with `innerHTML` (CMS, page builder,
+ * SPA), where inline `<script>` tags never execute — otherwise the button would
+ * render but do nothing. The `<script>` only handles the already-dismissed case
+ * on a normal page load, where it does run.
  */
 export function bannerSnippet(input: BannerSnippetInput): string {
   const mode: TrackingMode =
@@ -72,8 +85,17 @@ export function bannerSnippet(input: BannerSnippetInput): string {
   const summary = SUMMARIES[mode];
   const storage = mode === 'standard' ? 'localStorage' : 'sessionStorage';
   const learnMore = input.privacyUrl
-    ? `<a href="${escapeHtml(input.privacyUrl)}" target="_blank" rel="noopener noreferrer" style="color:#93c5fd;text-decoration:underline;">Learn more</a>`
+    ? ` <a href="${escapeHtml(input.privacyUrl)}" target="_blank" rel="noopener noreferrer" style="color:#93c5fd;text-decoration:underline;">Learn more</a>`
     : '';
+  const removeBar =
+    "var bar=document.getElementById('ryni-disclosure');if(bar&&bar.parentNode){bar.parentNode.removeChild(bar);}";
+  const dismiss = `try{${storage}.setItem('${DISMISS_KEY}','1');}catch(e){}${removeBar}return false;`;
 
-  return `<div id="ryni-disclosure" style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;padding:12px 16px;background:#1f2937;color:#f3f4f6;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;box-shadow:0 -1px 4px rgba(0,0,0,0.35);"><span>${summary}</span>${learnMore}<button id="ryni-disclosure-dismiss" type="button" aria-label="Dismiss" style="cursor:pointer;border:1px solid #6b7280;background:transparent;color:#f3f4f6;border-radius:6px;padding:4px 10px;font-size:13px;line-height:1.4;">Dismiss</button></div><script>(function(){var key='ryni_disclosure_dismissed';var bar=document.getElementById('ryni-disclosure');var btn=document.getElementById('ryni-disclosure-dismiss');function hide(){if(bar&&bar.parentNode){bar.parentNode.removeChild(bar);}}function dismiss(){try{${storage}.setItem(key,'1');}catch(e){}hide();}try{if(${storage}.getItem(key)){hide();}}catch(e){}if(btn){btn.addEventListener('click',dismiss);}})();</script>`;
+  return (
+    '<div id="ryni-disclosure" style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;padding:12px 16px;background:#1f2937;color:#f3f4f6;font-family:system-ui,-apple-system,\'Segoe UI\',Roboto,sans-serif;font-size:14px;line-height:1.5;box-shadow:0 -1px 4px rgba(0,0,0,0.35);">' +
+    `<span>${summary}${learnMore}</span>` +
+    `<button id="ryni-disclosure-dismiss" type="button" aria-label="Dismiss" onclick="${dismiss}" style="cursor:pointer;border:1px solid #6b7280;background:transparent;color:#f3f4f6;border-radius:6px;padding:4px 10px;font-size:13px;line-height:1.4;">Dismiss</button>` +
+    '</div>' +
+    `<script>(function(){try{if(${storage}.getItem('${DISMISS_KEY}')){${removeBar}}}catch(e){}})();</script>`
+  );
 }

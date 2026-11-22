@@ -157,8 +157,9 @@ where you want it.
   script, no external requests, no consent buttons. It is informational only,
   not a consent wall. Dismissal is stored per tier — `localStorage` for
   `standard`, `sessionStorage` for `session`/`minimal` — so the banner never
-  stores more than tracking does. An optional "Learn more" link can point at
-  your privacy policy.
+  stores more than tracking does. The "Learn more" link is part of the banner
+  copy; set its target in the privacy disclosure dialog (it defaults to
+  <https://ryni.secanis.ch>, clear the field to drop the link).
 
 ### Generated disclosure text
 
