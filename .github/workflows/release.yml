@@ -12,9 +12,11 @@
 #       ├──> bootstrap-gh-pages (parallel) ─── creates orphan branch if absent
 #       │        │
 #       │        └──> release-helm ─── packages chart, updates index.yaml
-#       │                              (helm repo on gh-pages)
-#       │              └──> publish-site ─── deploys landing page + helm repo
-#       │                                     to Pages (pages.yml, Actions source)
+#       │                              (helm repo on gh-pages), commits a
+#       │                              Pages marker commit on main
+#       │              └──> publish-site ─── dispatches pages.yml on main and
+#       │                                     waits (fresh GITHUB_SHA = new
+#       │                                     Pages build version)
 #       │
 #       └──> notify-artifacthub
 #
@@ -245,6 +247,11 @@ jobs:
     name: Package and publish helm chart
     needs: [resolve, build-images, bootstrap-gh-pages]
     runs-on: ubuntu-24.04
+    outputs:
+      # SHA of the marker commit pushed to main after gh-pages was updated.
+      # publish-site dispatches pages.yml on main so that commit becomes the
+      # Pages build version (see the job comment below).
+      pages_commit: ${{ steps.pages_commit.outputs.oid }}
     permissions:
       # Uploads the .tgz to the existing release and pushes index.yaml to
       # gh-pages.
@@ -322,13 +329,14 @@ jobs:
           fi
           git worktree remove --force /tmp/gh-pages-index
 
-      # GitHub Pages keys a deployment by the commit SHA (pages_build_version):
-      # re-deploying the same SHA keeps serving the artifact built for it the
-      # first time. A release that only updates gh-pages therefore kept the
-      # old index.yaml live. Create a signed commit on main touching site/ so
-      # publish-site deploys a NEW build version that includes the updated
-      # gh-pages index.
+      # GitHub Pages keys a deployment by the workflow run's GITHUB_SHA
+      # (deploy-pages sends it as pages_build_version). Re-dispatching a run
+      # with a SHA that was already deployed keeps serving the old artifact.
+      # Commit a marker file on main so publish-site has a brand-new commit to
+      # dispatch pages.yml against. The marker content is irrelevant; it only
+      # has to differ from the previous release.
       - name: Create Pages deploy commit
+        id: pages_commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.resolve.outputs.tag }}
@@ -339,26 +347,64 @@ jobs:
           cat > /tmp/pages-commit.json <<EOF
           {"query":"mutation(\$input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: \$input) { commit { oid } } }","variables":{"input":{"branch":{"repositoryNameWithOwner":"${GITHUB_REPOSITORY}","branchName":"main"},"message":{"headline":"chore(site): chart version $CHART_VERSION"},"fileChanges":{"additions":[{"path":"site/public/chart-version-${CHART_VERSION}.json","contents":"$CONTENT"}]},"expectedHeadOid":"$HEAD"}}}
           EOF
-          gh api graphql --input /tmp/pages-commit.json
+          OID="$(gh api graphql --input /tmp/pages-commit.json --jq '.data.createCommitOnBranch.commit.oid')"
+          echo "Pages marker commit: $OID"
+          echo "oid=$OID" >> "$GITHUB_OUTPUT"
 
   # -------------------------------------------------------------------------
-  # 4. Publish the landing page + Helm repo to GitHub Pages via the official
-  # Actions deployment (pages.yml). Runs after release-helm has written the
-  # new index.yaml + chart *.tgz to gh-pages, so the deploy artifact re-uses
-  # them. (Pages is configured with "GitHub Actions" as its source.)
+  # 4. Publish the landing page + Helm repo to GitHub Pages via pages.yml.
+  #
+  # This MUST be its own workflow run on main, not a reusable-workflow call:
+  # inside a called workflow github.sha stays the caller's SHA (the release
+  # tag's commit). deploy-pages uses GITHUB_SHA as pages_build_version, so the
+  # call re-used the build version of the last push to main and Pages kept
+  # serving its old artifact — the live index.yaml stayed at the previous
+  # chart version even though gh-pages was updated. Dispatching pages.yml on
+  # main gives it release-helm's fresh marker commit as GITHUB_SHA, so Pages
+  # deploys a new artifact (and pages.yml's verify job checks index.yaml).
+  # (workflow_dispatch is the one event a GITHUB_TOKEN-authored commit can
+  # still trigger.)
   # -------------------------------------------------------------------------
   publish-site:
     name: Publish site to GitHub Pages
     needs: [resolve, release-helm]
-    uses: ./.github/workflows/pages.yml
-    with:
-      # main, not the release tag: release-helm created a fresh signed commit
-      # there so Pages gets a new build version and re-reads gh-pages.
-      ref: main
+    runs-on: ubuntu-24.04
     permissions:
+      actions: write
       contents: read
-      pages: write
-      id-token: write
+    steps:
+      - name: Dispatch Pages workflow on main and wait
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAGES_COMMIT: ${{ needs.release-helm.outputs.pages_commit }}
+        run: |
+          if [ -z "$PAGES_COMMIT" ]; then
+            echo "::error::release-helm did not report the Pages marker commit"
+            exit 1
+          fi
+          # Run ids increase monotonically: remember the newest Pages dispatch
+          # before triggering, then wait for a newer one to appear.
+          BEFORE="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow pages.yml \
+            --event workflow_dispatch --limit 1 --json databaseId \
+            -q '.[0].databaseId // 0')"
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+          RUN_ID=""
+          for i in $(seq 1 30); do
+            RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow pages.yml \
+              --event workflow_dispatch --limit 1 --json databaseId \
+              -q '.[0].databaseId // 0')"
+            if [ "$RUN_ID" -gt "$BEFORE" ]; then
+              break
+            fi
+            RUN_ID=""
+            sleep 5
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::pages.yml was not queued on main"
+            exit 1
+          fi
+          echo "Watching Pages run ${RUN_ID} (main @ ${PAGES_COMMIT})"
+          gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
 
   # -------------------------------------------------------------------------
   # 5. Notify artifacthub.io (optional, best-effort)
