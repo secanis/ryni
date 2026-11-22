@@ -231,4 +231,30 @@ describe('collections', () => {
     });
     expect(site.id).toBeTruthy();
   });
+
+  describe('labels field', () => {
+    it('exposes an optional labels JSON field on sites', async () => {
+      const admin = await createAdminClient();
+      const sites = await admin.collections.getOne('sites');
+      const labels = sites.fields.find((f: any) => f.name === 'labels');
+      expect(labels).toBeTruthy();
+      expect(labels.type).toBe('json');
+      expect(labels.required).toBeFalsy();
+    });
+
+    it('stores and reads back a labels array', async () => {
+      const user = await createUserClient('labels-store');
+      const trackingId = rand();
+      const site = await user.pb.collection('sites').create({
+        name: 'Labeled Site',
+        tracking_id: trackingId,
+        endpoint_slug: trackingId,
+        allowed_origins: [],
+        created_by: user.userId,
+        labels: ['production', 'customer-acme'],
+      });
+      const fetched = await user.pb.collection('sites').getOne(site.id);
+      expect(fetched.labels).toEqual(['production', 'customer-acme']);
+    });
+  });
 });
