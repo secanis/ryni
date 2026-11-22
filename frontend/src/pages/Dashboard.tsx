@@ -11,6 +11,10 @@ import TimeSeries from '~/components/charts/TimeSeries';
 import Breakdown from '~/components/charts/Breakdown';
 import ShareDialog from '~/components/sites/ShareDialog';
 import SiteSettingsDialog from '~/components/sites/SiteSettingsDialog';
+import TrackingCodeDialog from '~/components/sites/TrackingCodeDialog';
+import CampaignLinksDialog from '~/components/sites/CampaignLinksDialog';
+import DisclosureDialog from '~/components/sites/DisclosureDialog';
+import SiteActionsMenu from '~/components/sites/SiteActionsMenu';
 import CopyButton from '~/components/ui/CopyButton';
 
 export default function Dashboard() {
@@ -19,6 +23,9 @@ export default function Dashboard() {
   const [selected, setSelected] = createSignal('7d');
   const [shareOpen, setShareOpen] = createSignal(false);
   const [settingsOpen, setSettingsOpen] = createSignal(false);
+  const [codeOpen, setCodeOpen] = createSignal(false);
+  const [campaignOpen, setCampaignOpen] = createSignal(false);
+  const [disclosureOpen, setDisclosureOpen] = createSignal(false);
   const [site, setSite] = createSignal<Site | null>(null);
   const [members, setMembers] = createSignal<SiteMembers | null>(null);
   const [range, setRange] = createSignal<DateRangeValue>({
@@ -137,6 +144,11 @@ export default function Dashboard() {
             <Pencil size={15} />
             Edit
           </button>
+          <SiteActionsMenu
+            onCode={() => setCodeOpen(true)}
+            onCampaigns={() => setCampaignOpen(true)}
+            onDisclosure={() => setDisclosureOpen(true)}
+          />
           <DateRange selected={selected()} onChange={onRange} />
         </div>
       </div>
@@ -151,6 +163,18 @@ export default function Dashboard() {
           onClose={() => setSettingsOpen(false)}
           onSaved={setSite}
         />
+      </Show>
+
+      <Show when={codeOpen() && site()}>
+        <TrackingCodeDialog site={site()!} onClose={() => setCodeOpen(false)} />
+      </Show>
+
+      <Show when={campaignOpen() && site()}>
+        <CampaignLinksDialog site={site()!} onClose={() => setCampaignOpen(false)} />
+      </Show>
+
+      <Show when={disclosureOpen() && site()}>
+        <DisclosureDialog site={site()!} onClose={() => setDisclosureOpen(false)} />
       </Show>
 
       <Show when={!statsStore.loading() && s()} fallback={<p class="text-muted">Loading…</p>}>
