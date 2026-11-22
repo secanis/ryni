@@ -3,15 +3,13 @@ import { useNavigate } from '@solidjs/router';
 import { Trash2 } from 'lucide-solid';
 import { sitesStore } from '~/stores/sites';
 import { disclosureModeOf, trackingModeOf } from '~/utils/privacy';
-import { bannerSnippet, disclosureText } from '~/utils/disclosure';
-import Snippet from '~/components/sites/Snippet';
-import CampaignLinks from '~/components/sites/CampaignLinks';
 import CopyButton from '~/components/ui/CopyButton';
 import type { DisclosureMode, Site, TrackingMode } from '~/types';
 
 // Edit dialog for an existing site: rename, change the allowed origins
-// (the tracked site's URL(s) for Variant A), pick the privacy tier, and
-// review the integration snippets again. Also offers site deletion.
+// (the tracked site's URL(s) for Variant A), and pick the privacy tier and
+// disclosure mode. Tracking code, campaign links and the disclosure preview
+// live in their own dialogs. Also offers site deletion.
 export default function SiteSettingsDialog(props: {
   site: Site;
   onClose: () => void;
@@ -33,7 +31,6 @@ export default function SiteSettingsDialog(props: {
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
 
-  const server = () => window.location.origin;
   const field = 'w-full border border-border rounded-radius-sm px-3 py-2 bg-surface dark:bg-surface-2';
 
   async function save() {
@@ -158,46 +155,6 @@ export default function SiteSettingsDialog(props: {
               <code class="font-mono text-sm break-all">/t/{props.site.endpoint_slug}</code>
             </div>
           </div>
-        </div>
-
-        <div class="border-t border-border pt-4">
-          <h3 class="font-medium mb-3">Tracking code</h3>
-          <Snippet
-            input={{
-              server: server(),
-              site: props.site.tracking_id,
-              detailed: false,
-              mode: trackingMode(),
-            }}
-          />
-        </div>
-
-        {disclosureMode() !== 'none' && (
-          <div class="border-t border-border pt-4 space-y-4">
-            <h3 class="font-medium">Privacy disclosure</h3>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="block text-sm">Disclosure text</label>
-                <CopyButton text={disclosureText({ mode: trackingMode() })} label="Copy text" />
-              </div>
-              <pre class="whitespace-pre-wrap break-words text-sm font-mono border border-border rounded-radius-sm p-3 bg-surface dark:bg-surface-2 max-h-48 overflow-y-auto">
-                {disclosureText({ mode: trackingMode() })}
-              </pre>
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="block text-sm">Dismissal banner</label>
-                <CopyButton text={bannerSnippet({ mode: trackingMode() })} label="Copy banner" />
-              </div>
-              <pre class="whitespace-pre-wrap break-all text-sm font-mono border border-border rounded-radius-sm p-3 bg-surface dark:bg-surface-2 max-h-48 overflow-y-auto">
-                {bannerSnippet({ mode: trackingMode() })}
-              </pre>
-            </div>
-          </div>
-        )}
-
-        <div class="border-t border-border pt-4">
-          <CampaignLinks baseUrl={props.site.allowed_origins?.[0] ?? ''} />
         </div>
 
         {error() && <p class="text-danger text-sm">{error()}</p>}
