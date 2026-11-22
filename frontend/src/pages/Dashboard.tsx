@@ -11,6 +11,9 @@ import TimeSeries from '~/components/charts/TimeSeries';
 import Breakdown from '~/components/charts/Breakdown';
 import ShareDialog from '~/components/sites/ShareDialog';
 import SiteSettingsDialog from '~/components/sites/SiteSettingsDialog';
+import TrackingCodeDialog from '~/components/sites/TrackingCodeDialog';
+import CampaignLinksDialog from '~/components/sites/CampaignLinksDialog';
+import DisclosureDialog from '~/components/sites/DisclosureDialog';
 import CopyButton from '~/components/ui/CopyButton';
 
 export default function Dashboard() {
@@ -19,6 +22,9 @@ export default function Dashboard() {
   const [selected, setSelected] = createSignal('7d');
   const [shareOpen, setShareOpen] = createSignal(false);
   const [settingsOpen, setSettingsOpen] = createSignal(false);
+  const [codeOpen, setCodeOpen] = createSignal(false);
+  const [campaignOpen, setCampaignOpen] = createSignal(false);
+  const [disclosureOpen, setDisclosureOpen] = createSignal(false);
   const [site, setSite] = createSignal<Site | null>(null);
   const [members, setMembers] = createSignal<SiteMembers | null>(null);
   const [range, setRange] = createSignal<DateRangeValue>({
@@ -101,6 +107,26 @@ export default function Dashboard() {
             <span>{site()?.tracking_id ?? ''}</span>
             <CopyButton text={site()?.tracking_id ?? ''} />
           </div>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm">
+            <button
+              onClick={() => setCodeOpen(true)}
+              class="text-accent-3 hover:underline"
+            >
+              Tracking code
+            </button>
+            <button
+              onClick={() => setCampaignOpen(true)}
+              class="text-accent-3 hover:underline"
+            >
+              Campaign links
+            </button>
+            <button
+              onClick={() => setDisclosureOpen(true)}
+              class="text-accent-3 hover:underline"
+            >
+              Privacy disclosure
+            </button>
+          </div>
           <Show when={members()}>
             <div class="flex flex-wrap items-center gap-1.5 mt-2">
               <For each={members()!.managers}>
@@ -151,6 +177,18 @@ export default function Dashboard() {
           onClose={() => setSettingsOpen(false)}
           onSaved={setSite}
         />
+      </Show>
+
+      <Show when={codeOpen() && site()}>
+        <TrackingCodeDialog site={site()!} onClose={() => setCodeOpen(false)} />
+      </Show>
+
+      <Show when={campaignOpen() && site()}>
+        <CampaignLinksDialog site={site()!} onClose={() => setCampaignOpen(false)} />
+      </Show>
+
+      <Show when={disclosureOpen() && site()}>
+        <DisclosureDialog site={site()!} onClose={() => setDisclosureOpen(false)} />
       </Show>
 
       <Show when={!statsStore.loading() && s()} fallback={<p class="text-muted">Loading…</p>}>
