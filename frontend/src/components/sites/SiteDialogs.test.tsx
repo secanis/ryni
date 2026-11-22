@@ -1,8 +1,23 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render } from 'solid-js/web';
+
+const mocks = vi.hoisted(() => ({
+  update: vi.fn(),
+  remove: vi.fn(),
+}));
+
+vi.mock('~/stores/sites', () => ({
+  sitesStore: { update: mocks.update, remove: mocks.remove },
+}));
+
+vi.mock('@solidjs/router', () => ({
+  useNavigate: () => () => {},
+}));
+
 import TrackingCodeDialog from './TrackingCodeDialog';
 import CampaignLinksDialog from './CampaignLinksDialog';
 import DisclosureDialog from './DisclosureDialog';
+import SiteSettingsDialog from './SiteSettingsDialog';
 import type { Site } from '~/types';
 
 const site: Site = {
@@ -29,6 +44,7 @@ function mount(renderFn: () => unknown) {
 
 afterEach(() => {
   document.body.innerHTML = '';
+  vi.clearAllMocks();
 });
 
 describe('site dialogs', () => {
@@ -50,5 +66,28 @@ describe('site dialogs', () => {
     expect(host.textContent).toContain('Privacy disclosure');
     expect(host.textContent).toContain('Disclosure text');
     expect(host.textContent).toContain('Dismissal banner');
+  });
+
+  it('SiteSettingsDialog saves parsed labels', async () => {
+    mocks.update.mockResolvedValueOnce({ ...site, labels: ['prod', 'Acme'] });
+    const host = mount(() => (
+      <SiteSettingsDialog site={{ ...site, labels: ['old'] }} onClose={() => {}} />
+    ));
+
+    const input = [...host.querySelectorAll('input')].find((i) => i.id === 'site-labels');
+    if (!input) throw new Error('no #site-labels input');
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setter?.call(input, 'prod, prod ,, Acme');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const save = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Save'));
+    if (!save) throw new Error('no Save button');
+    save.click();
+    await Promise.resolve();
+
+    expect(mocks.update).toHaveBeenCalledWith(
+      site.id,
+      expect.objectContaining({ labels: ['prod', 'Acme'] }),
+    );
   });
 });
