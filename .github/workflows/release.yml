@@ -18,7 +18,8 @@
 #       │                                     waits (fresh GITHUB_SHA = new
 #       │                                     Pages build version)
 #       │
-#       └──> notify-artifacthub
+#       └──> (no Artifact Hub ping: its API requires a session + CSRF token.
+#            Artifact Hub polls the repository index every 30 minutes.)
 #
 # Required secrets:
 #   - DOCKERHUB_USERNAME   Docker Hub username
@@ -405,23 +406,3 @@ jobs:
           fi
           echo "Watching Pages run ${RUN_ID} (main @ ${PAGES_COMMIT})"
           gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
-
-  # -------------------------------------------------------------------------
-  # 5. Notify artifacthub.io (optional, best-effort)
-  # -------------------------------------------------------------------------
-  notify-artifacthub:
-    name: Trigger Artifact Hub re-index (optional)
-    runs-on: ubuntu-24.04
-    needs: publish-site
-    if: success()
-    continue-on-error: true
-    permissions: {}
-    steps:
-      - name: Ping Artifact Hub
-        run: |
-          REPO="https://ryni.secanis.ch/"
-          echo "Notifying Artifact Hub to re-index $REPO"
-          curl -fsS -X POST \
-            -H "Content-Type: application/json" \
-            "https://artifacthub.io/api/v1/repositories/reindex" \
-            -d "{\"url\":\"$REPO\"}" || true

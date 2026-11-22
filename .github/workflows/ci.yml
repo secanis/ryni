@@ -117,5 +117,19 @@ jobs:
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
         with:
           version: v4.2.2
+      # Artifact Hub silently ignores a metadata file whose repositoryID does
+      # not match the repository it was created for, so a placeholder UUID
+      # leaves the repo "unverified" forever with no visible error.
+      - name: Validate Artifact Hub metadata
+        run: |
+          ID="$(sed -n 's/^repositoryID: *//p' artifacthub-repo.yaml)"
+          if ! printf '%s' "$ID" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+            echo "::error::artifacthub-repo.yaml repositoryID is missing or not a UUID"
+            exit 1
+          fi
+          if printf '%s' "$ID" | grep -q '^00000000-'; then
+            echo "::error::artifacthub-repo.yaml still contains the placeholder repositoryID"
+            exit 1
+          fi
       - name: Run lint
         run: make lint-helm
