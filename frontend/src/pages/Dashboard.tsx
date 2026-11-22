@@ -5,6 +5,7 @@ import { statsStore } from '~/stores/stats';
 import { sitesStore } from '~/stores/sites';
 import type { Site, SiteMembers } from '~/types';
 import { trackingModeOf } from '~/utils/privacy';
+import { siteLabels } from '~/utils/labels';
 import StatCard from '~/components/dashboard/StatCard';
 import DateRange, { type DateRangeValue } from '~/components/dashboard/DateRange';
 import TimeSeries from '~/components/charts/TimeSeries';
@@ -15,6 +16,7 @@ import TrackingCodeDialog from '~/components/sites/TrackingCodeDialog';
 import CampaignLinksDialog from '~/components/sites/CampaignLinksDialog';
 import DisclosureDialog from '~/components/sites/DisclosureDialog';
 import SiteActionsMenu from '~/components/sites/SiteActionsMenu';
+import SiteLabels from '~/components/sites/SiteLabels';
 import CopyButton from '~/components/ui/CopyButton';
 
 export default function Dashboard() {
@@ -108,24 +110,27 @@ export default function Dashboard() {
             <span>{site()?.tracking_id ?? ''}</span>
             <CopyButton text={site()?.tracking_id ?? ''} />
           </div>
-          <Show when={members()}>
+          <Show when={siteLabels(site() ?? {}).length > 0 || members()}>
             <div class="flex flex-wrap items-center gap-1.5 mt-2">
-              <For each={members()!.managers}>
-                {(m) => (
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-accent-3">
-                    <span class="font-medium">{m.name || m.email}</span>
-                    <span class="opacity-70">manager</span>
-                  </span>
-                )}
-              </For>
-              <For each={members()!.viewers}>
-                {(m) => (
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-muted">
-                    <span class="font-medium">{m.name || m.email}</span>
-                    <span class="opacity-70">viewer</span>
-                  </span>
-                )}
-              </For>
+              <SiteLabels labels={siteLabels(site() ?? {})} />
+              <Show when={members()}>
+                <For each={members()!.managers}>
+                  {(m) => (
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-accent-3">
+                      <span class="font-medium">{m.name || m.email}</span>
+                      <span class="opacity-70">manager</span>
+                    </span>
+                  )}
+                </For>
+                <For each={members()!.viewers}>
+                  {(m) => (
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-muted">
+                      <span class="font-medium">{m.name || m.email}</span>
+                      <span class="opacity-70">viewer</span>
+                    </span>
+                  )}
+                </For>
+              </Show>
             </div>
           </Show>
         </div>
