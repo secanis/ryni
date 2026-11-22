@@ -44,6 +44,7 @@ async function update(
     allowed_origins: string[];
     tracking_mode?: TrackingMode;
     disclosure_mode?: DisclosureMode;
+    labels?: string[];
   },
 ): Promise<Site> {
   const payload: {
@@ -51,6 +52,7 @@ async function update(
     allowed_origins: string[];
     tracking_mode?: TrackingMode;
     disclosure_mode?: DisclosureMode;
+    labels?: string[];
   } = {
     name: data.name,
     allowed_origins: data.allowed_origins,
@@ -60,6 +62,11 @@ async function update(
   }
   if (data.disclosure_mode !== undefined) {
     payload.disclosure_mode = data.disclosure_mode;
+  }
+  // `[]` is meaningful here (all labels removed), so only `undefined` is
+  // treated as "leave unchanged".
+  if (data.labels !== undefined) {
+    payload.labels = data.labels;
   }
   const rec = await pb.collection('sites').update(id, payload);
   await load();

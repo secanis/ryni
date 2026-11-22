@@ -1,9 +1,10 @@
-import { createSignal, onMount, Show } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
+import { createSignal, onMount, Show } from 'solid-js';import { useNavigate } from '@solidjs/router';
 import { pb } from '~/services/pocketbase';
 import type { SeriesPoint, Site } from '~/types';
 import CopyButton from '~/components/ui/CopyButton';
 import TimeSeries from '~/components/charts/TimeSeries';
+import SiteLabels from '~/components/sites/SiteLabels';
+import { siteLabels } from '~/utils/labels';
 
 interface MiniStats {
   views: number;
@@ -39,6 +40,12 @@ export default function SiteCard(props: { site: Site }) {
           <CopyButton text={props.site.tracking_id} />
         </span>
       </div>
+
+      <Show when={siteLabels(props.site).length > 0}>
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <SiteLabels labels={siteLabels(props.site)} />
+        </div>
+      </Show>
 
       <Show when={mini()}>
         <div class="mt-3 flex items-center justify-between gap-3">

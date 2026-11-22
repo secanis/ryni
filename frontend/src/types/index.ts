@@ -17,6 +17,7 @@ export interface Site {
   updated: string;
   tracking_mode?: TrackingMode;
   disclosure_mode?: DisclosureMode;
+  labels?: string[];
 }
 
 export interface Breakdown {

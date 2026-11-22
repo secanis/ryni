@@ -3,6 +3,7 @@ import { useNavigate } from '@solidjs/router';
 import { Trash2 } from 'lucide-solid';
 import { sitesStore } from '~/stores/sites';
 import { disclosureModeOf, trackingModeOf } from '~/utils/privacy';
+import { parseLabels } from '~/utils/labels';
 import CopyButton from '~/components/ui/CopyButton';
 import type { DisclosureMode, Site, TrackingMode } from '~/types';
 
@@ -28,6 +29,9 @@ export default function SiteSettingsDialog(props: {
   const [disclosureMode, setDisclosureMode] = createSignal<DisclosureMode>(
     untrack(() => disclosureModeOf(props.site.disclosure_mode)),
   );
+  const [labels, setLabels] = createSignal(
+    untrack(() => (props.site.labels || []).join(', ')),
+  );
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
 
@@ -45,6 +49,7 @@ export default function SiteSettingsDialog(props: {
           .filter(Boolean),
         tracking_mode: trackingMode(),
         disclosure_mode: disclosureMode(),
+        labels: parseLabels(labels()),
       });
       props.onSaved?.(updated);
       props.onClose();
@@ -109,6 +114,18 @@ export default function SiteSettingsDialog(props: {
               value={origins()}
               onInput={(e) => setOrigins(e.currentTarget.value)}
               placeholder="https://mysite.example"
+              class={field}
+            />
+          </div>
+          <div>
+            <label for="site-labels" class="block text-sm mb-1">
+              Labels (comma-separated)
+            </label>
+            <input
+              id="site-labels"
+              value={labels()}
+              onInput={(e) => setLabels(e.currentTarget.value)}
+              placeholder="production, customer-acme"
               class={field}
             />
           </div>
