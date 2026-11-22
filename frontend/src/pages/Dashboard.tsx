@@ -14,6 +14,7 @@ import SiteSettingsDialog from '~/components/sites/SiteSettingsDialog';
 import TrackingCodeDialog from '~/components/sites/TrackingCodeDialog';
 import CampaignLinksDialog from '~/components/sites/CampaignLinksDialog';
 import DisclosureDialog from '~/components/sites/DisclosureDialog';
+import SiteActionsMenu from '~/components/sites/SiteActionsMenu';
 import CopyButton from '~/components/ui/CopyButton';
 
 export default function Dashboard() {
@@ -107,26 +108,6 @@ export default function Dashboard() {
             <span>{site()?.tracking_id ?? ''}</span>
             <CopyButton text={site()?.tracking_id ?? ''} />
           </div>
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm">
-            <button
-              onClick={() => setCodeOpen(true)}
-              class="text-accent-3 hover:underline"
-            >
-              Tracking code
-            </button>
-            <button
-              onClick={() => setCampaignOpen(true)}
-              class="text-accent-3 hover:underline"
-            >
-              Campaign links
-            </button>
-            <button
-              onClick={() => setDisclosureOpen(true)}
-              class="text-accent-3 hover:underline"
-            >
-              Privacy disclosure
-            </button>
-          </div>
           <Show when={members()}>
             <div class="flex flex-wrap items-center gap-1.5 mt-2">
               <For each={members()!.managers}>
@@ -163,6 +144,11 @@ export default function Dashboard() {
             <Pencil size={15} />
             Edit
           </button>
+          <SiteActionsMenu
+            onCode={() => setCodeOpen(true)}
+            onCampaigns={() => setCampaignOpen(true)}
+            onDisclosure={() => setDisclosureOpen(true)}
+          />
           <DateRange selected={selected()} onChange={onRange} />
         </div>
       </div>

@@ -31,16 +31,17 @@ Settings becomes a short config form.
 
 - **A** — icon buttons inline in the header's right cluster: compact, but icon
   meaning is unclear (mystery meat).
-- **B** — a "More ⋯" dropdown beside Edit: minimal header, but actions one
-  click deeper and less discoverable.
-- **C (chosen)** — a quiet secondary text-action row under the site title: no
-  crowding of the already-full right cluster (Share, Edit, 3 date buttons), and
-  discoverable next to the tracking-id / member chips.
+- **B (chosen)** — a "More ⋯" dropdown beside Edit holding the three actions:
+  header stays minimal, one new control.
+- **C** — a quiet secondary text-action row under the site title: no crowding
+  and discoverable, but after a local preview this read as too buried; switched
+  to B.
 
 ## Decisions (with Matthias)
 
 - Three dialogs: Tracking code, Campaign links, Privacy disclosure.
-- Entry: secondary text-action row under the site title (option C).
+- Entry: a **"More ⋯" dropdown beside Share/Edit** (option B; switched from C
+  after a local preview).
 
 ## Design detail
 
