@@ -28,8 +28,15 @@ export function parseLabels(input: string): string[] {
 }
 
 // Safe read for rendering: anything that isn't a non-empty string array
-// (missing field on legacy records) becomes an empty list.
+// (missing field on legacy records) becomes an empty list. Values are
+// re-normalized on read as well — labels written outside the settings
+// dialog (admin UI, REST, imports) bypass `parseLabels`, and an unbounded
+// one would render as a pill that overflows the header or card.
 export function siteLabels(site: { labels?: unknown }): string[] {
   if (!Array.isArray(site.labels)) return [];
-  return site.labels.filter((l): l is string => typeof l === 'string' && l.trim() !== '');
+  return site.labels
+    .filter((l): l is string => typeof l === 'string')
+    .map((l) => Array.from(l.trim()).slice(0, MAX_LABEL_LEN).join(''))
+    .filter((l) => l !== '')
+    .slice(0, MAX_LABELS);
 }

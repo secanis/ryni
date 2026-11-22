@@ -25,4 +25,9 @@ describe('SiteLabels', () => {
       'acme',
     ]);
   });
+
+  it('renders pills as siblings, without a wrapper element', () => {
+    const host = mount(['production', 'acme']);
+    expect(host.querySelector('div')).toBeNull();
+  });
 });
