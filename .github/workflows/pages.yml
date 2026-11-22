@@ -14,8 +14,8 @@
 #
 # Triggers:
 #   - push to main (site/ or this workflow changes)
-#   - workflow_dispatch (manual)
-#   - workflow_call (from release.yml after the Helm index has been updated)
+#   - workflow_dispatch (manual; release.yml dispatches this on main after
+#     updating the Helm index, so the Pages build version is a fresh commit)
 
 name: Pages
 
@@ -26,12 +26,6 @@ on:
       - 'site/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      ref:
-        description: 'Git ref to deploy (empty = the triggering ref)'
-        type: string
-        default: ''
 
 # A new deployment queues behind an in-flight one. Do not cancel: a site build
 # racing a release deploy could otherwise drop the freshly published chart
@@ -59,7 +53,6 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Setup Node
