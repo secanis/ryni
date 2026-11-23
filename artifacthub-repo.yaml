@@ -2,11 +2,14 @@
 # Artifact Hub repository configuration.
 # Reference: https://artifacthub.io/docs/topics/repositories/helm-charts
 #
-# This file is OPTIONAL. It's used by Artifact Hub to verify ownership of
-# a Helm repository. Once the chart is published to gh-pages, add the
-# gh-pages URL (https://secanis.github.io/ryni/) to Artifact Hub via
-# the "Add Source" UI.
-repositoryID: 00000000-0000-0000-0000-000000000000
+# This file is used by Artifact Hub to verify ownership of the repository.
+# It MUST be served from the same path as the chart `index.yaml`, i.e.
+# https://ryni.secanis.ch/artifacthub-repo.yaml (Pages + gh-pages).
+#
+# `repositoryID` is the identifier Artifact Hub shows on the repository card
+# in its control panel. It is public, not a secret, and it must match exactly
+# or the "Verified publisher" flag is never enabled.
+repositoryID: 69b58493-f130-4ca7-83be-5110f37d581d
 owners:
   - name: secanis
     email: support@secanis.ch
