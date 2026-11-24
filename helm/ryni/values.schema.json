@@ -36,10 +36,17 @@
       "properties": {
         "pullSecrets": {
           "type": "array",
-          "description": "Image pull secrets (referenced by name). Empty list for public docker.io images. Set this if you push to a private registry.",
+          "description": "Image pull secrets, passed verbatim as `imagePullSecrets` on both pod specs and the ServiceAccount. Each item is a Kubernetes LocalObjectReference, i.e. `- name: regcred`. Empty for public docker.io images; set this for a private registry.",
           "default": [],
           "items": {
-            "type": "string"
+            "type": "object",
+            "description": "A LocalObjectReference: `- name: <secret>`.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the pull secret in the release namespace."
+              }
+            }
           }
         },
         "pullPolicy": {
@@ -629,6 +636,10 @@
         "annotations": {
           "type": "object",
           "description": "Ingress annotations. The defaults issue a certificate via cert-manager and pin the Traefik websecure entrypoint.",
+          "default": {
+            "cert-manager.io/cluster-issuer": "letsencrypt",
+            "traefik.ingress.kubernetes.io/router.entrypoints": "websecure"
+          },
           "additionalProperties": {
             "type": "string"
           }
@@ -636,22 +647,41 @@
         "hosts": {
           "type": "array",
           "description": "Ingress hosts. Override the `host` field at install time.",
+          "default": [
+            {
+              "host": "ryni.example.com",
+              "paths": [
+                {
+                  "path": "/",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          ],
           "items": {
             "type": "object",
             "properties": {
               "host": {
                 "type": "string",
-                "description": "Public hostname."
+                "description": "Public hostname.",
+                "default": "ryni.example.com"
               },
               "paths": {
                 "type": "array",
                 "description": "Paths routed to the frontend Service.",
+                "default": [
+                  {
+                    "path": "/",
+                    "pathType": "Prefix"
+                  }
+                ],
                 "items": {
                   "type": "object",
                   "properties": {
                     "path": {
                       "type": "string",
-                      "description": "URL path."
+                      "description": "URL path.",
+                      "default": "/"
                     },
                     "pathType": {
                       "type": "string",
@@ -672,19 +702,31 @@
         "tls": {
           "type": "array",
           "description": "TLS configuration. The cert-manager annotation above issues the cert.",
+          "default": [
+            {
+              "hosts": [
+                "ryni.example.com"
+              ],
+              "secretName": "ryni-tls"
+            }
+          ],
           "items": {
             "type": "object",
             "properties": {
               "hosts": {
                 "type": "array",
                 "description": "Hostnames covered by the certificate.",
+                "default": [
+                  "ryni.example.com"
+                ],
                 "items": {
                   "type": "string"
                 }
               },
               "secretName": {
                 "type": "string",
-                "description": "Secret the issued certificate is stored in."
+                "description": "Secret the issued certificate is stored in.",
+                "default": "ryni-tls"
               }
             }
           }

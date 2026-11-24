@@ -115,7 +115,9 @@ if [[ "$MODE" == "lint" ]]; then
 
   log "checking values schema is in sync ..."
   python3 "$SCRIPT_DIR/check-values-schema.py" "$HELM_CHART" \
-    || fail "values.schema.json is out of sync with values.yaml"
+    || fail "values schema check failed (schema out of sync with values.yaml)"
+  python3 "$SCRIPT_DIR/check-values-schema.py" --self-test \
+    || fail "values schema check failed (self-test)"
   ok "values schema in sync"
 
   RENDER_OUT="$(mktemp)"

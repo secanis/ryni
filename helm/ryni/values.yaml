@@ -16,8 +16,9 @@ namespace:
   name: ryni
 
 image:
-  # -- Image pull secrets (referenced by name). Empty list for docker.io public
-  # images. Set this if you push to a private registry.
+  # -- Image pull secrets, passed verbatim as `imagePullSecrets` (a list of
+  # LocalObjectReferences, i.e. `- name: regcred`). Empty list for docker.io
+  # public images. Set this if you push to a private registry.
   pullSecrets: []
   # -- Image pull policy applied to both containers.
   pullPolicy: IfNotPresent
