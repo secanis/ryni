@@ -21,6 +21,8 @@ One client script, two ways to deploy it:
 - Per-site dashboards: views, unique visitors, average duration, bounce rate,
   live visitors, time-series, and referrer / browser / OS / device / screen /
   page breakdowns.
+- Exports: raw pageviews as CSV or JSON for any date range (no visitor
+  identifiers), plus the views chart as PNG or JPG.
 - Multiple websites, each with its own tracking id.
 - Per-site roles: **viewer** (read) and **manager** (read, configure, share,
   delete). Any user can create a site and becomes its manager.
