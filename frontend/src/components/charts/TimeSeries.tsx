@@ -69,11 +69,18 @@ export default function TimeSeries(props: {
   points: SeriesPoint[];
   compact?: boolean;
   showUniques?: boolean;
+  onSvg?: (el: SVGSVGElement) => void;
 }) {
   return (
     <Show
       when={props.compact}
-      fallback={<FullSeries points={props.points} showUniques={props.showUniques !== false} />}
+      fallback={
+        <FullSeries
+          points={props.points}
+          showUniques={props.showUniques !== false}
+          onSvg={props.onSvg}
+        />
+      }
     >
       <MiniSeries points={props.points} />
     </Show>
@@ -134,7 +141,11 @@ function MiniSeries(props: { points: SeriesPoint[] }) {
 // Full chart with axes and hover tooltip. The viewBox width tracks the measured
 // container width so the SVG maps 1:1 to pixels (no letterboxing, no text
 // distortion) while still spanning the full card width.
-function FullSeries(props: { points: SeriesPoint[]; showUniques: boolean }) {
+function FullSeries(props: {
+  points: SeriesPoint[];
+  showUniques: boolean;
+  onSvg?: (el: SVGSVGElement) => void;
+}) {
   const [hover, setHover] = createSignal<number | null>(null);
   const [width, setWidth] = createSignal(600);
   let host: HTMLDivElement | undefined;
@@ -178,6 +189,7 @@ function FullSeries(props: { points: SeriesPoint[]; showUniques: boolean }) {
   return (
     <div ref={host} class="w-full">
       <svg
+        ref={(el) => props.onSvg?.(el)}
         viewBox={`0 0 ${W()} ${H}`}
         class="w-full"
         style={{ height: `${H}px`, display: 'block' }}
@@ -268,6 +280,7 @@ function FullSeries(props: { points: SeriesPoint[]; showUniques: boolean }) {
               width={step()}
               height={plotH()}
               fill="transparent"
+              data-export-hide
               aria-label={
                 props.showUniques
                   ? `${p.date}: ${p.views} views, ${p.uniqueVisitors} visitors`
@@ -293,7 +306,7 @@ function FullSeries(props: { points: SeriesPoint[]; showUniques: boolean }) {
             const tx = () => Math.min(Math.max(cx(), tw() / 2 + 4), W() - tw() / 2 - 4);
             const ry = () => Math.max(2, y(h().point.views) - gap - th);
             return (
-              <g pointer-events="none">
+              <g pointer-events="none" data-export-hide>
                 <line
                   x1={cx()}
                   x2={cx()}

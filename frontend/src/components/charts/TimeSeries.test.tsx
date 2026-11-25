@@ -76,6 +76,24 @@ describe('TimeSeries', () => {
     expect(texts).toContain('5 views · 2 visitors');
   });
 
+  it('marks hit targets and the hover group as export-hidden', () => {
+    const host = renderChart();
+    const hits = [...host.querySelectorAll('rect')].filter((r) => r.getAttribute('aria-label'));
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.every((r) => r.hasAttribute('data-export-hide'))).toBe(true);
+
+    hits[0].dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+    expect(host.querySelector('g[data-export-hide]')).not.toBeNull();
+  });
+
+  it('reports the chart svg through onSvg', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    let captured: SVGSVGElement | undefined;
+    render(() => <TimeSeries points={points} onSvg={(el) => (captured = el)} />, host);
+    expect(captured).toBe(host.querySelector('svg'));
+  });
+
   it('renders empty and single-point series without error', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

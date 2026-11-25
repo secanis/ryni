@@ -16,8 +16,12 @@ import TrackingCodeDialog from '~/components/sites/TrackingCodeDialog';
 import CampaignLinksDialog from '~/components/sites/CampaignLinksDialog';
 import DisclosureDialog from '~/components/sites/DisclosureDialog';
 import SiteActionsMenu from '~/components/sites/SiteActionsMenu';
+import ChartExportMenu from '~/components/charts/ChartExportMenu';
 import SiteLabels from '~/components/sites/SiteLabels';
 import CopyButton from '~/components/ui/CopyButton';
+import { downloadBlob } from '~/utils/download';
+import { exportFilename, fetchSiteExport, toCsv, toJson } from '~/utils/siteExport';
+import { svgToBlob } from '~/utils/svgToImage';
 
 export default function Dashboard() {
   const params = useParams();
@@ -30,6 +34,8 @@ export default function Dashboard() {
   const [disclosureOpen, setDisclosureOpen] = createSignal(false);
   const [site, setSite] = createSignal<Site | null>(null);
   const [members, setMembers] = createSignal<SiteMembers | null>(null);
+  const [exportError, setExportError] = createSignal('');
+  let chartSvg: SVGSVGElement | undefined;
   const [range, setRange] = createSignal<DateRangeValue>({
     from: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
     to: new Date().toISOString(),
@@ -59,6 +65,38 @@ export default function Dashboard() {
 
   const s = () => statsStore.stats();
   const mode = () => trackingModeOf(site()?.tracking_mode);
+
+  async function exportData(format: 'csv' | 'json') {
+    setExportError('');
+    try {
+      const payload = await fetchSiteExport(siteId()!, range());
+      const body = format === 'csv' ? toCsv(payload) : toJson(payload);
+      const type =
+        format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8';
+      downloadBlob(
+        new Blob([body], { type }),
+        exportFilename(payload.site.name, payload.from, payload.to, format),
+      );
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    }
+  }
+
+  async function exportChart(type: 'png' | 'jpeg') {
+    if (!chartSvg || !site()) return;
+    setExportError('');
+    try {
+      const background =
+        getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#ffffff';
+      const blob = await svgToBlob(chartSvg, { type: `image/${type}`, background });
+      downloadBlob(
+        blob,
+        exportFilename(site()!.name, range().from, range().to, type === 'png' ? 'png' : 'jpg'),
+      );
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    }
+  }
 
   const cards = createMemo(() => {
     const stats = s();
@@ -153,10 +191,16 @@ export default function Dashboard() {
             onCode={() => setCodeOpen(true)}
             onCampaigns={() => setCampaignOpen(true)}
             onDisclosure={() => setDisclosureOpen(true)}
+            onExportCsv={() => void exportData('csv')}
+            onExportJson={() => void exportData('json')}
           />
           <DateRange selected={selected()} onChange={onRange} />
         </div>
       </div>
+
+      <Show when={exportError()}>
+        <p class="text-xs text-danger">{exportError()}</p>
+      </Show>
 
       <Show when={shareOpen()}>
         <ShareDialog siteId={siteId() || ''} onClose={() => setShareOpen(false)} />
@@ -193,8 +237,15 @@ export default function Dashboard() {
         </div>
 
         <div class="p-4 bg-surface rounded-radius-card border border-border">
-          <h3 class="font-medium mb-3">Views over time</h3>
-          <TimeSeries points={s()!.series} showUniques={mode() !== 'minimal'} />
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-medium">Views over time</h3>
+            <ChartExportMenu onExport={(type) => void exportChart(type)} />
+          </div>
+          <TimeSeries
+            points={s()!.series}
+            showUniques={mode() !== 'minimal'}
+            onSvg={(el) => (chartSvg = el)}
+          />
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
