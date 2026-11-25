@@ -7,6 +7,8 @@ export default function SiteActionsMenu(props: {
   onCode: () => void;
   onCampaigns: () => void;
   onDisclosure: () => void;
+  onExportCsv: () => void;
+  onExportJson: () => void;
 }) {
   const [open, setOpen] = createSignal(false);
   const item = 'block w-full text-left px-4 py-2 text-sm hover:bg-surface-2';
@@ -55,6 +57,26 @@ export default function SiteActionsMenu(props: {
             }}
           >
             Privacy disclosure
+          </button>
+          <button
+            type="button"
+            class={item}
+            onClick={() => {
+              props.onExportCsv();
+              setOpen(false);
+            }}
+          >
+            Export CSV
+          </button>
+          <button
+            type="button"
+            class={item}
+            onClick={() => {
+              props.onExportJson();
+              setOpen(false);
+            }}
+          >
+            Export JSON
           </button>
         </div>
       </Show>

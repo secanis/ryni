@@ -18,6 +18,8 @@ import DisclosureDialog from '~/components/sites/DisclosureDialog';
 import SiteActionsMenu from '~/components/sites/SiteActionsMenu';
 import SiteLabels from '~/components/sites/SiteLabels';
 import CopyButton from '~/components/ui/CopyButton';
+import { downloadBlob } from '~/utils/download';
+import { exportFilename, fetchSiteExport, toCsv, toJson } from '~/utils/siteExport';
 
 export default function Dashboard() {
   const params = useParams();
@@ -30,6 +32,7 @@ export default function Dashboard() {
   const [disclosureOpen, setDisclosureOpen] = createSignal(false);
   const [site, setSite] = createSignal<Site | null>(null);
   const [members, setMembers] = createSignal<SiteMembers | null>(null);
+  const [exportError, setExportError] = createSignal('');
   const [range, setRange] = createSignal<DateRangeValue>({
     from: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
     to: new Date().toISOString(),
@@ -59,6 +62,22 @@ export default function Dashboard() {
 
   const s = () => statsStore.stats();
   const mode = () => trackingModeOf(site()?.tracking_mode);
+
+  async function exportData(format: 'csv' | 'json') {
+    setExportError('');
+    try {
+      const payload = await fetchSiteExport(siteId()!, range());
+      const body = format === 'csv' ? toCsv(payload) : toJson(payload);
+      const type =
+        format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8';
+      downloadBlob(
+        new Blob([body], { type }),
+        exportFilename(payload.site.name, payload.from, payload.to, format),
+      );
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    }
+  }
 
   const cards = createMemo(() => {
     const stats = s();
@@ -153,10 +172,16 @@ export default function Dashboard() {
             onCode={() => setCodeOpen(true)}
             onCampaigns={() => setCampaignOpen(true)}
             onDisclosure={() => setDisclosureOpen(true)}
+            onExportCsv={() => void exportData('csv')}
+            onExportJson={() => void exportData('json')}
           />
           <DateRange selected={selected()} onChange={onRange} />
         </div>
       </div>
+
+      <Show when={exportError()}>
+        <p class="text-xs text-danger">{exportError()}</p>
+      </Show>
 
       <Show when={shareOpen()}>
         <ShareDialog siteId={siteId() || ''} onClose={() => setShareOpen(false)} />
