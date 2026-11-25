@@ -54,7 +54,11 @@ describe('site export helpers', () => {
 
   it('writes the exact column header', () => {
     expect(CSV_COLUMNS.join(',')).toBe(HEADER);
-    expect(toCsv(payload).split('\n')[0]).toBe(HEADER);
+    expect(toCsv(payload).slice(1).split('\n')[0]).toBe(HEADER);
+  });
+
+  it('starts with a UTF-8 BOM so Excel reads accented content correctly', () => {
+    expect(toCsv(payload).charCodeAt(0)).toBe(0xfeff);
   });
 
   it('quotes commas, doubled quotes and newlines', () => {
@@ -94,7 +98,7 @@ describe('site export helpers', () => {
   });
 
   it('emits only the header line for an empty payload', () => {
-    expect(toCsv({ ...payload, records: [] })).toBe(`${HEADER}\n`);
+    expect(toCsv({ ...payload, records: [] })).toBe(`\uFEFF${HEADER}\n`);
   });
 
   it('serialises JSON without visitor_id', () => {

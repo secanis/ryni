@@ -54,7 +54,7 @@ export function toCsv(payload: SiteExportPayload): string {
       }).join(','),
     );
   }
-  return `${lines.join('\n')}\n`;
+  return `\uFEFF${lines.join('\n')}\n`;
 }
 
 export function toJson(payload: SiteExportPayload): string {
