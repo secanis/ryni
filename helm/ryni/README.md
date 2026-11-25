@@ -71,9 +71,25 @@ See `values.yaml` for the full, commented list. The commonly-overridden ones:
 | `pocketbase.secret.existingSecret` | `""` | Bring your own `PB_SECRET` Secret |
 | `frontend.replicaCount` | `2` | Frontend replicas |
 
+## Values schema
+
+`helm/ryni/values.schema.json` describes every value in `values.yaml` — type,
+default, description, and the allowed values for closed sets such as
+`pocketbase.service.type` and `ingress.hosts[].paths[].pathType`. Artifact Hub
+renders it as the chart's value table, so the parameters are documented on the
+package page instead of only in the repo.
+
+Helm validates values against the schema on install and upgrade, which means a
+typo'd enum fails immediately with a clear message. The schema is intentionally
+permissive: unknown keys are still ignored and no value is required, so
+existing values files keep working.
+
+`make lint-helm` fails when a key in `values.yaml` has no matching schema path,
+or when a schema `default` disagrees with `values.yaml`.
+
 ## Testing
 
 ```bash
-make lint-helm    # helm lint + helm template render check
+make lint-helm    # helm lint + values-schema sync + helm template render check
 make test-helm    # full kind-based end-to-end test (builds images, installs, smokes)
 ```

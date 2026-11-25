@@ -113,6 +113,13 @@ if [[ "$MODE" == "lint" ]]; then
   log "running helm lint ..."
   helm lint "$HELM_CHART"
 
+  log "checking values schema is in sync ..."
+  python3 "$SCRIPT_DIR/check-values-schema.py" "$HELM_CHART" \
+    || fail "values schema check failed (schema out of sync with values.yaml)"
+  python3 "$SCRIPT_DIR/check-values-schema.py" --self-test \
+    || fail "values schema check failed (self-test)"
+  ok "values schema in sync"
+
   RENDER_OUT="$(mktemp)"
   trap 'rm -f "$RENDER_OUT"' EXIT
   log "rendering chart ..."

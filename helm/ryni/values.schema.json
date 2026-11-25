@@ -1,0 +1,737 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RÝNI Helm chart values",
+  "description": "Privacy-preserving, self-hosted web analytics (PocketBase backend + SolidJS frontend served by nginx). This schema describes every value the chart reads. It is intentionally permissive: unknown keys are ignored, and no value is required, so existing values files keep working. Artifact Hub renders this file as the chart's documented values table; Helm validates user values against the closed sets (enums) below on install and upgrade.",
+  "type": "object",
+  "properties": {
+    "nameOverride": {
+      "type": "string",
+      "description": "Override the chart name (used in resource naming).",
+      "default": ""
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "description": "Override the fully-qualified app name (used in resource naming).",
+      "default": ""
+    },
+    "namespace": {
+      "type": "object",
+      "description": "Namespace the chart installs into. The chart can optionally create it. Pick ONE: `namespace.create: true` or `helm install --create-namespace` with `namespace.create: false` — using both can race.",
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Whether to create the namespace. The namespace is annotated `helm.sh/resource-policy: keep`, so `helm uninstall` never deletes it.",
+          "default": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the namespace to install into.",
+          "default": "ryni"
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "description": "Settings shared by both container images.",
+      "properties": {
+        "pullSecrets": {
+          "type": "array",
+          "description": "Image pull secrets, passed verbatim as `imagePullSecrets` on both pod specs and the ServiceAccount. Each item is a Kubernetes LocalObjectReference, i.e. `- name: regcred`. Empty for public docker.io images; set this for a private registry.",
+          "default": [],
+          "items": {
+            "type": "object",
+            "description": "A LocalObjectReference: `- name: <secret>`.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the pull secret in the release namespace."
+              }
+            }
+          }
+        },
+        "pullPolicy": {
+          "type": "string",
+          "description": "Image pull policy applied to both containers unless the per-image `pullPolicy` overrides it.",
+          "default": "IfNotPresent",
+          "enum": [
+            "",
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "description": "ServiceAccount configuration. Both pods reference this SA; no RBAC is attached today, but the SA is created explicitly so future hooks (or external-secrets operators) can bind roles to it.",
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Whether to create a ServiceAccount.",
+          "default": true
+        },
+        "name": {
+          "type": "string",
+          "description": "ServiceAccount name. If empty, the chart uses the fullname.",
+          "default": ""
+        }
+      }
+    },
+    "pocketbase": {
+      "type": "object",
+      "description": "PocketBase backend (single replica; sqlite is not HA-capable).",
+      "properties": {
+        "replicaCount": {
+          "type": "integer",
+          "description": "Number of PocketBase replicas. Keep at 1: sqlite on a ReadWriteOnce volume is not HA-capable.",
+          "default": 1
+        },
+        "image": {
+          "type": "object",
+          "description": "PocketBase container image.",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "description": "PocketBase image repository.",
+              "default": "docker.io/secanis/ryni-pocketbase"
+            },
+            "tag": {
+              "type": "string",
+              "description": "PocketBase image tag. Should match the RÝNI release (e.g. v0.1.0).",
+              "default": "v0.1.0"
+            },
+            "pullPolicy": {
+              "type": "string",
+              "description": "Image pull policy for PocketBase. Empty falls back to `image.pullPolicy`.",
+              "default": "",
+              "enum": [
+                "",
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ]
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "description": "PocketBase Service. The container always listens on 8090; `port` only changes the Service port (targetPort: http), so probes and the listener never disagree.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Kubernetes service type for PocketBase.",
+              "default": "ClusterIP",
+              "enum": [
+                "ClusterIP",
+                "NodePort",
+                "LoadBalancer",
+                "ExternalName"
+              ]
+            },
+            "port": {
+              "type": "integer",
+              "description": "Port exposed by the PocketBase service.",
+              "default": 8090
+            }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "description": "PocketBase stores everything in a single sqlite `data.db` (sites, page-view records, and heartbeats). Analytics data grows slowly — a few Gi is plenty for most self-hosted installs.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether to create a PVC for the PB data directory. When false, PB data lives in an emptyDir and is lost when the pod is recreated.",
+              "default": true
+            },
+            "size": {
+              "type": "string",
+              "description": "PVC size (Kubernetes quantity, e.g. `5Gi`).",
+              "default": "5Gi"
+            },
+            "storageClass": {
+              "type": "string",
+              "description": "Storage class name. IMPORTANT: the StorageClass must have `reclaimPolicy: Retain` if you want the underlying PV (and your data) to survive PVC deletion. The chart annotates the PVC with `helm.sh/resource-policy: keep` for the Helm lifecycle, but the PV's fate is the StorageClass's decision.",
+              "default": "longhorn"
+            },
+            "accessModes": {
+              "type": "array",
+              "description": "PVC access modes.",
+              "default": [
+                "ReadWriteOnce"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ReadWriteOnce",
+                  "ReadOnlyMany",
+                  "ReadWriteMany",
+                  "ReadWriteOncePod"
+                ]
+              }
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "description": "PocketBase holds the sqlite page cache and JSVM pools in memory; 256Mi is a comfortable floor for typical analytics workloads.",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string",
+                  "description": "CPU request (e.g. `50m`).",
+                  "default": "50m"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory request (e.g. `128Mi`).",
+                  "default": "128Mi"
+                }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string",
+                  "description": "CPU limit (e.g. `1000m`).",
+                  "default": "1000m"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory limit (e.g. `1Gi`).",
+                  "default": "1Gi"
+                }
+              }
+            }
+          }
+        },
+        "healthcheck": {
+          "type": "object",
+          "description": "Health check path used by the startup, liveness and readiness probes.",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Health check path (PB exposes /api/health). Probes always target the container port 8090.",
+              "default": "/api/health"
+            }
+          }
+        },
+        "startupProbe": {
+          "type": "object",
+          "description": "startupProbe tuning: allows up to failureThreshold * periodSeconds (default 150s) for the first boot (migrations, superuser upsert) before the liveness probe takes over.",
+          "properties": {
+            "periodSeconds": {
+              "type": "integer",
+              "description": "Seconds between startup probe attempts.",
+              "default": 5
+            },
+            "failureThreshold": {
+              "type": "integer",
+              "description": "Failed startup probe attempts tolerated before the container is restarted.",
+              "default": 30
+            }
+          }
+        },
+        "superuserIps": {
+          "type": "string",
+          "description": "Superuser login allowlist (space-separated IPs/CIDRs), passed as PB_SUPERUSER_IPS and applied by entrypoint.sh on every start. Empty = no restriction. NOTE: behind an ingress PB sees the ingress controller's pod IP unless PB's trusted proxy settings are configured, so restrict to client ranges only after configuring those.",
+          "default": ""
+        },
+        "automigrate": {
+          "type": "boolean",
+          "description": "PB_AUTOMIGRATE. Default false because the container root filesystem is read-only and migration files generated from dashboard edits would be lost on restart anyway. Shipped migrations are always applied on start regardless of this flag.",
+          "default": false
+        },
+        "secret": {
+          "type": "object",
+          "description": "PB_SECRET source. EITHER supply an existing Secret (name + key), OR leave both empty and the chart will auto-generate a Secret on install. PB_SECRET is the AES key for the encrypted `data.db`; the chart re-uses it via `lookup` on upgrade, so it must never rotate.",
+          "properties": {
+            "existingSecret": {
+              "type": "string",
+              "description": "Name of an existing Kubernetes Secret containing PB_SECRET. If empty, the chart auto-generates one as a regular release resource that is re-used on upgrade (lookup) and kept on uninstall (resource-policy).",
+              "default": ""
+            },
+            "existingSecretKey": {
+              "type": "string",
+              "description": "Key inside `existingSecret` that holds the PB_SECRET value.",
+              "default": "PB_SECRET"
+            }
+          }
+        },
+        "superuser": {
+          "type": "object",
+          "description": "First superuser credentials. The Secret is mounted into the pod as PB_SUPERUSER_EMAIL / PB_SUPERUSER_PASSWORD and entrypoint.sh creates the superuser headlessly on the first boot. Leave empty to auto-generate. PB requires the password to be at least 8 characters.",
+          "properties": {
+            "existingSecret": {
+              "type": "string",
+              "description": "Name of an existing Kubernetes Secret holding PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD. If empty, the chart creates one on install with a random 24-char password.",
+              "default": ""
+            },
+            "existingSecretEmailKey": {
+              "type": "string",
+              "description": "Key inside `existingSecret` that holds the email value.",
+              "default": "PB_SUPERUSER_EMAIL"
+            },
+            "existingSecretPasswordKey": {
+              "type": "string",
+              "description": "Key inside `existingSecret` that holds the password value.",
+              "default": "PB_SUPERUSER_PASSWORD"
+            }
+          }
+        },
+        "podSecurityContext": {
+          "type": "object",
+          "description": "Pod-level securityContext for the PocketBase pod.",
+          "properties": {
+            "runAsUser": {
+              "type": "integer",
+              "description": "Run PB as the `pocketbase` user (uid 1000 in the image).",
+              "default": 1000
+            },
+            "runAsGroup": {
+              "type": "integer",
+              "description": "Primary group id.",
+              "default": 1000
+            },
+            "runAsNonRoot": {
+              "type": "boolean",
+              "description": "Require a non-root user.",
+              "default": true
+            },
+            "fsGroup": {
+              "type": "integer",
+              "description": "Group that owns the mounted volumes.",
+              "default": 1000
+            },
+            "seccompProfile": {
+              "type": "object",
+              "description": "Seccomp profile selection.",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Seccomp profile type.",
+                  "default": "RuntimeDefault",
+                  "enum": [
+                    "RuntimeDefault",
+                    "Localhost",
+                    "Unconfined"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "containerSecurityContext": {
+          "type": "object",
+          "description": "Container-level securityContext. The root filesystem is read-only; /tmp is an emptyDir and /app/pb_data the PVC.",
+          "properties": {
+            "allowPrivilegeEscalation": {
+              "type": "boolean",
+              "description": "Forbid privilege escalation.",
+              "default": false
+            },
+            "readOnlyRootFilesystem": {
+              "type": "boolean",
+              "description": "Mount the container root filesystem read-only.",
+              "default": true
+            },
+            "capabilities": {
+              "type": "object",
+              "description": "Linux capabilities.",
+              "properties": {
+                "drop": {
+                  "type": "array",
+                  "description": "Capabilities to drop.",
+                  "default": [
+                    "ALL"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "seccompProfile": {
+              "type": "object",
+              "description": "Seccomp profile selection.",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Seccomp profile type.",
+                  "default": "RuntimeDefault",
+                  "enum": [
+                    "RuntimeDefault",
+                    "Localhost",
+                    "Unconfined"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "frontend": {
+      "type": "object",
+      "description": "SolidJS frontend served by nginx.",
+      "properties": {
+        "replicaCount": {
+          "type": "integer",
+          "description": "Number of frontend replicas.",
+          "default": 2
+        },
+        "image": {
+          "type": "object",
+          "description": "Frontend container image.",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "description": "Frontend image repository.",
+              "default": "docker.io/secanis/ryni-frontend"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Frontend image tag. Should match the RÝNI release.",
+              "default": "v0.1.0"
+            },
+            "pullPolicy": {
+              "type": "string",
+              "description": "Image pull policy for the frontend. Empty falls back to `image.pullPolicy`.",
+              "default": "",
+              "enum": [
+                "",
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ]
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "description": "Frontend Service.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Kubernetes service type for the frontend.",
+              "default": "ClusterIP",
+              "enum": [
+                "ClusterIP",
+                "NodePort",
+                "LoadBalancer",
+                "ExternalName"
+              ]
+            },
+            "port": {
+              "type": "integer",
+              "description": "Port exposed by the frontend service. Default 8080 because the nginx-unprivileged image listens on 8080 (designed to run as non-root). Use 80 only if you switch to the standard nginx image and grant NET_BIND_SERVICE.",
+              "default": 8080
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "description": "Frontend container resources. nginx serving a static SPA needs little.",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string",
+                  "description": "CPU request (e.g. `50m`).",
+                  "default": "50m"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory request (e.g. `32Mi`).",
+                  "default": "32Mi"
+                }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string",
+                  "description": "CPU limit (e.g. `200m`).",
+                  "default": "200m"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory limit (e.g. `128Mi`).",
+                  "default": "128Mi"
+                }
+              }
+            }
+          }
+        },
+        "podSecurityContext": {
+          "type": "object",
+          "description": "Pod-level securityContext for the frontend pod.",
+          "properties": {
+            "runAsNonRoot": {
+              "type": "boolean",
+              "description": "Require a non-root user.",
+              "default": true
+            },
+            "runAsUser": {
+              "type": "integer",
+              "description": "Run as the `nginx` user in nginxinc/nginx-unprivileged.",
+              "default": 101
+            },
+            "runAsGroup": {
+              "type": "integer",
+              "description": "Primary group id.",
+              "default": 101
+            },
+            "seccompProfile": {
+              "type": "object",
+              "description": "Seccomp profile selection.",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Seccomp profile type.",
+                  "default": "RuntimeDefault",
+                  "enum": [
+                    "RuntimeDefault",
+                    "Localhost",
+                    "Unconfined"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "containerSecurityContext": {
+          "type": "object",
+          "description": "Container-level securityContext. The root filesystem is read-only; nginx writes its pid/temp files to /tmp and /var/cache/nginx (both emptyDirs), and the runtime config (config.js) goes to /tmp/ryni written by the entrypoint at start.",
+          "properties": {
+            "allowPrivilegeEscalation": {
+              "type": "boolean",
+              "description": "Forbid privilege escalation.",
+              "default": false
+            },
+            "readOnlyRootFilesystem": {
+              "type": "boolean",
+              "description": "Mount the container root filesystem read-only.",
+              "default": true
+            },
+            "capabilities": {
+              "type": "object",
+              "description": "Linux capabilities.",
+              "properties": {
+                "drop": {
+                  "type": "array",
+                  "description": "Capabilities to drop.",
+                  "default": [
+                    "ALL"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "seccompProfile": {
+              "type": "object",
+              "description": "Seccomp profile selection.",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Seccomp profile type.",
+                  "default": "RuntimeDefault",
+                  "enum": [
+                    "RuntimeDefault",
+                    "Localhost",
+                    "Unconfined"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "rateLimit": {
+          "type": "object",
+          "description": "nginx-level ingest rate limiting (defense-in-depth on top of PocketBase's built-in rate limiter, which is the authoritative one and is enabled by a migration). Auth brute-force is handled by PB. nginx sits behind the ingress, so to key on the real client IP it must trust the ingress as a proxy: set `realIpFrom` to the ingress controller's pod CIDR(s). Set `enabled` false to rely on PocketBase alone.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the nginx ingest rate limit zone.",
+              "default": true
+            },
+            "realIpFrom": {
+              "type": "array",
+              "description": "Trusted proxy CIDRs for the nginx `real_ip` module (the ingress controller pods). Restrict to the cluster's pod CIDR for correctness.",
+              "default": [
+                "10.0.0.0/8",
+                "172.16.0.0/12",
+                "192.168.0.0/16"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "realIpHeader": {
+              "type": "string",
+              "description": "Header the ingress uses to carry the client IP.",
+              "default": "X-Forwarded-For"
+            },
+            "ingestRate": {
+              "type": "string",
+              "description": "Ingest rate per client IP, in nginx `limit_req_zone` notation (e.g. `240r/m`).",
+              "default": "240r/m"
+            },
+            "ingestBurst": {
+              "type": "integer",
+              "description": "Burst allowance for the ingest zone before requests are rejected.",
+              "default": 500
+            }
+          }
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "description": "NetworkPolicies (require a CNI that enforces them, e.g. Calico, Cilium; without one they are inert). When enabled, PocketBase only accepts traffic on its HTTP port from the frontend pods (plus `pocketbase.extraFrom`); the frontend accepts traffic on its HTTP port from anywhere. Egress is not restricted (PB needs OIDC, SMTP if configured).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Create the NetworkPolicies.",
+          "default": true
+        },
+        "pocketbase": {
+          "type": "object",
+          "description": "PocketBase NetworkPolicy tuning.",
+          "properties": {
+            "extraFrom": {
+              "type": "array",
+              "description": "Additional `from` peers allowed to reach PocketBase (NetworkPolicy peer syntax), e.g. a monitoring namespace or a backup job. Each item is a free-form peer object.",
+              "default": [],
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "description": "Ingress configuration. Defaults to Traefik + cert-manager.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to create an Ingress resource.",
+          "default": true
+        },
+        "className": {
+          "type": "string",
+          "description": "IngressClass name. `traefik` is the cluster's default.",
+          "default": "traefik"
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Ingress annotations. The defaults issue a certificate via cert-manager and pin the Traefik websecure entrypoint.",
+          "default": {
+            "cert-manager.io/cluster-issuer": "letsencrypt",
+            "traefik.ingress.kubernetes.io/router.entrypoints": "websecure"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "hosts": {
+          "type": "array",
+          "description": "Ingress hosts. Override the `host` field at install time.",
+          "default": [
+            {
+              "host": "ryni.example.com",
+              "paths": [
+                {
+                  "path": "/",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string",
+                "description": "Public hostname.",
+                "default": "ryni.example.com"
+              },
+              "paths": {
+                "type": "array",
+                "description": "Paths routed to the frontend Service.",
+                "default": [
+                  {
+                    "path": "/",
+                    "pathType": "Prefix"
+                  }
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "URL path.",
+                      "default": "/"
+                    },
+                    "pathType": {
+                      "type": "string",
+                      "description": "Kubernetes path matching type.",
+                      "default": "Prefix",
+                      "enum": [
+                        "Prefix",
+                        "Exact",
+                        "ImplementationSpecific"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tls": {
+          "type": "array",
+          "description": "TLS configuration. The cert-manager annotation above issues the cert.",
+          "default": [
+            {
+              "hosts": [
+                "ryni.example.com"
+              ],
+              "secretName": "ryni-tls"
+            }
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "hosts": {
+                "type": "array",
+                "description": "Hostnames covered by the certificate.",
+                "default": [
+                  "ryni.example.com"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "secretName": {
+                "type": "string",
+                "description": "Secret the issued certificate is stored in.",
+                "default": "ryni-tls"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
