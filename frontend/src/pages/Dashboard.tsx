@@ -16,10 +16,12 @@ import TrackingCodeDialog from '~/components/sites/TrackingCodeDialog';
 import CampaignLinksDialog from '~/components/sites/CampaignLinksDialog';
 import DisclosureDialog from '~/components/sites/DisclosureDialog';
 import SiteActionsMenu from '~/components/sites/SiteActionsMenu';
+import ChartExportMenu from '~/components/charts/ChartExportMenu';
 import SiteLabels from '~/components/sites/SiteLabels';
 import CopyButton from '~/components/ui/CopyButton';
 import { downloadBlob } from '~/utils/download';
 import { exportFilename, fetchSiteExport, toCsv, toJson } from '~/utils/siteExport';
+import { svgToBlob } from '~/utils/svgToImage';
 
 export default function Dashboard() {
   const params = useParams();
@@ -33,6 +35,7 @@ export default function Dashboard() {
   const [site, setSite] = createSignal<Site | null>(null);
   const [members, setMembers] = createSignal<SiteMembers | null>(null);
   const [exportError, setExportError] = createSignal('');
+  let chartSvg: SVGSVGElement | undefined;
   const [range, setRange] = createSignal<DateRangeValue>({
     from: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
     to: new Date().toISOString(),
@@ -73,6 +76,22 @@ export default function Dashboard() {
       downloadBlob(
         new Blob([body], { type }),
         exportFilename(payload.site.name, payload.from, payload.to, format),
+      );
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    }
+  }
+
+  async function exportChart(type: 'png' | 'jpeg') {
+    if (!chartSvg || !site()) return;
+    setExportError('');
+    try {
+      const background =
+        getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#ffffff';
+      const blob = await svgToBlob(chartSvg, { type: `image/${type}`, background });
+      downloadBlob(
+        blob,
+        exportFilename(site()!.name, range().from, range().to, type === 'png' ? 'png' : 'jpg'),
       );
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Export failed');
@@ -218,8 +237,15 @@ export default function Dashboard() {
         </div>
 
         <div class="p-4 bg-surface rounded-radius-card border border-border">
-          <h3 class="font-medium mb-3">Views over time</h3>
-          <TimeSeries points={s()!.series} showUniques={mode() !== 'minimal'} />
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-medium">Views over time</h3>
+            <ChartExportMenu onExport={(type) => void exportChart(type)} />
+          </div>
+          <TimeSeries
+            points={s()!.series}
+            showUniques={mode() !== 'minimal'}
+            onSvg={(el) => (chartSvg = el)}
+          />
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
